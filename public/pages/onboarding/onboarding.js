@@ -485,140 +485,176 @@ if (fieldId === 'website') {
     // =============================================================================
     
 function showSubmissionProgress() {
-    const timestamp = Date.now();
-    const callStack = new Error().stack;
-    
-    console.log('🚀 [SUBMISSION PROGRESS] Starting button lockdown', {
-        timestamp,
-        currentStep: window.currentStep,
-        totalSteps: window.totalSteps,
-        userAgent: navigator.userAgent,
-        callStack: callStack.split('\n').slice(0, 5)
-    });
-    
-    // Find ALL possible submission-related buttons with extensive logging
-    const selectors = [
-        '[onclick*="submitOnboarding"]',
-        '#finish-btn', 
-        '[onclick*="skipStep"]',
-        'button[onclick]'
-    ];
-    
-    let allButtons = [];
-    selectors.forEach(selector => {
-        const buttons = document.querySelectorAll(selector);
-        console.log(`🔍 [SUBMISSION PROGRESS] Found ${buttons.length} buttons with selector: ${selector}`);
-        allButtons = [...allButtons, ...Array.from(buttons)];
-    });
-    
-    // Remove duplicates and log each unique button
-    const uniqueButtons = [...new Set(allButtons)];
-    console.log(`📊 [SUBMISSION PROGRESS] Total unique buttons found: ${uniqueButtons.length}`);
-    
-    uniqueButtons.forEach((btn, index) => {
-        const beforeState = {
-            id: btn.id,
-            disabled: btn.disabled,
-            textContent: btn.textContent?.trim(),
-            onclick: btn.onclick?.toString().substring(0, 100),
-            pointerEvents: getComputedStyle(btn).pointerEvents,
-            display: getComputedStyle(btn).display,
-            visibility: getComputedStyle(btn).visibility
-        };
-        
-        console.log(`🔒 [SUBMISSION PROGRESS] Button ${index + 1} BEFORE disable:`, beforeState);
-        
-        // Disable the button
-        btn.disabled = true;
-        btn.style.pointerEvents = 'none';
-        
-        // Update text for submission buttons
-        if (btn.id === 'finish-btn' || btn.onclick?.toString().includes('submitOnboarding')) {
-            btn.textContent = 'Creating Profile...';
-            btn.classList.add('loading');
-        }
-        
-        const afterState = {
-            id: btn.id,
-            disabled: btn.disabled,
-            textContent: btn.textContent?.trim(),
-            onclick: btn.onclick?.toString().substring(0, 100),
-            pointerEvents: getComputedStyle(btn).pointerEvents,
-            display: getComputedStyle(btn).display,
-            visibility: getComputedStyle(btn).visibility
-        };
-        
-        console.log(`✅ [SUBMISSION PROGRESS] Button ${index + 1} AFTER disable:`, afterState);
-        
-        // Verify the disable worked
-        if (!btn.disabled || getComputedStyle(btn).pointerEvents !== 'none') {
-            console.error(`🚨 [SUBMISSION PROGRESS] Button ${index + 1} FAILED to disable properly!`, {
-                expectedDisabled: true,
-                actualDisabled: btn.disabled,
-                expectedPointerEvents: 'none',
-                actualPointerEvents: getComputedStyle(btn).pointerEvents
-            });
-        }
-    });
-    
-    // Log DOM state after changes
-    console.log('📋 [SUBMISSION PROGRESS] Final DOM state:', {
-        totalButtonsProcessed: uniqueButtons.length,
-        finishBtnExists: !!document.getElementById('finish-btn'),
-        finishBtnDisabled: document.getElementById('finish-btn')?.disabled,
-        skipBtnExists: !!document.getElementById('skip-btn'),
-        skipBtnDisabled: document.getElementById('skip-btn')?.disabled,
-        processingTime: Date.now() - timestamp
-    });
-    
-    // Set up monitoring for any button clicks after this point
-    const postLockdownMonitor = (e) => {
-        const button = e.target.closest('button');
-        if (button && (
-            button.onclick?.toString().includes('submitOnboarding') ||
-            button.onclick?.toString().includes('skipStep') ||
-            button.id === 'finish-btn'
-        )) {
-            console.error('🚨 [SUBMISSION PROGRESS] BUTTON CLICK AFTER LOCKDOWN!', {
-                buttonId: button.id,
-                disabled: button.disabled,
-                pointerEvents: getComputedStyle(button).pointerEvents,
-                textContent: button.textContent?.trim(),
-                timestamp: Date.now(),
-                timeSinceLockdown: Date.now() - timestamp
-            });
-        }
-    };
-    
-    document.addEventListener('click', postLockdownMonitor, { once: false });
-    
-    // Remove monitor after 10 seconds
-    setTimeout(() => {
-        document.removeEventListener('click', postLockdownMonitor);
-        console.log('🔍 [SUBMISSION PROGRESS] Post-lockdown monitoring ended');
-    }, 10000);
-    
-    console.log('🎯 [SUBMISSION PROGRESS] Button lockdown complete', {
-        totalTime: Date.now() - timestamp,
-        success: true
-    });
-}
-    
-    function updateSubmissionMessage(message) {
-        const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
-        if (submitButton) {
-            submitButton.textContent = message;
-        }
+    // Hide the entire onboarding form
+    const onboardingForm = document.getElementById('onboarding-form');
+    if (onboardingForm) {
+        onboardingForm.style.display = 'none';
     }
 
-    function hideSubmissionProgress() {
-        const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Complete Onboarding';
-            submitButton.classList.remove('loading');
+    // Create progress overlay
+    const progressOverlay = document.createElement('div');
+    progressOverlay.id = 'submission-progress-overlay';
+    progressOverlay.className = 'fixed inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center z-50';
+    progressOverlay.innerHTML = `
+        <div class="max-w-md mx-auto text-center p-8">
+            <div class="w-24 h-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+                <i class="fas fa-cog text-white text-3xl animate-spin"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-white mb-4">Creating Your Profile</h2>
+            <p class="text-white/80 text-lg mb-8">Setting up your AI-powered lead generation system...</p>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-white/20 rounded-full h-3 mb-6">
+                <div id="submission-progress-bar" class="bg-gradient-to-r from-emerald-400 to-cyan-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+            
+            <!-- Progress Steps -->
+            <div class="space-y-3 text-left">
+                <div id="step-auth" class="flex items-center text-white/70">
+                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
+                        <i class="fas fa-spinner animate-spin text-xs"></i>
+                    </div>
+                    <span>Verifying authentication...</span>
+                </div>
+                <div id="step-validate" class="flex items-center text-white/50">
+                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
+                        <span class="text-xs">2</span>
+                    </div>
+                    <span>Validating profile data...</span>
+                </div>
+                <div id="step-ai" class="flex items-center text-white/50">
+                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
+                        <span class="text-xs">3</span>
+                    </div>
+                    <span>Training AI algorithms...</span>
+                </div>
+                <div id="step-save" class="flex items-center text-white/50">
+                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
+                        <span class="text-xs">4</span>
+                    </div>
+                    <span>Saving profile...</span>
+                </div>
+                <div id="step-finalize" class="flex items-center text-white/50">
+                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
+                        <span class="text-xs">5</span>
+                    </div>
+                    <span>Finalizing setup...</span>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-white/60 text-sm">
+                <span id="progress-time">Estimated time: 25 seconds</span>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(progressOverlay);
+    
+    // Start progress simulation
+    let currentProgress = 0;
+    let currentStepIndex = 0;
+    const steps = ['step-auth', 'step-validate', 'step-ai', 'step-save', 'step-finalize'];
+    const stepDurations = [3000, 5000, 8000, 6000, 3000]; // Total: 25 seconds
+    const stepNames = [
+        'Verifying authentication...',
+        'Validating profile data...',
+        'Training AI algorithms...',
+        'Saving profile...',
+        'Finalizing setup...'
+    ];
+    
+    const progressBar = document.getElementById('submission-progress-bar');
+    const progressTime = document.getElementById('progress-time');
+    
+    function updateProgressStep(stepIndex) {
+        // Mark previous steps as complete
+        for (let i = 0; i < stepIndex; i++) {
+            const stepEl = document.getElementById(steps[i]);
+            if (stepEl) {
+                stepEl.className = 'flex items-center text-emerald-400';
+                stepEl.querySelector('.w-6').innerHTML = '<i class="fas fa-check text-xs"></i>';
+                stepEl.querySelector('.w-6').className = 'w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center mr-3';
+            }
+        }
+        
+        // Update current step
+        if (stepIndex < steps.length) {
+            const currentStepEl = document.getElementById(steps[stepIndex]);
+            if (currentStepEl) {
+                currentStepEl.className = 'flex items-center text-white';
+                currentStepEl.querySelector('.w-6').innerHTML = '<i class="fas fa-spinner animate-spin text-xs"></i>';
+                currentStepEl.querySelector('.w-6').className = 'w-6 h-6 rounded-full border-2 border-emerald-400 flex items-center justify-center mr-3';
+            }
         }
     }
+    
+    function animateProgress() {
+        const totalDuration = 25000; // 25 seconds
+        const interval = 100; // Update every 100ms
+        const increment = (100 / totalDuration) * interval;
+        
+        const progressInterval = setInterval(() => {
+            currentProgress += increment;
+            
+            if (progressBar) {
+                progressBar.style.width = `${Math.min(currentProgress, 100)}%`;
+            }
+            
+            // Update time remaining
+            const timeRemaining = Math.max(0, Math.ceil((totalDuration - (currentProgress / 100 * totalDuration)) / 1000));
+            if (progressTime) {
+                if (timeRemaining > 0) {
+                    progressTime.textContent = `Estimated time remaining: ${timeRemaining} seconds`;
+                } else {
+                    progressTime.textContent = 'Almost done...';
+                }
+            }
+            
+            if (currentProgress >= 100) {
+                clearInterval(progressInterval);
+            }
+        }, interval);
+        
+        // Update steps at specific intervals
+        stepDurations.forEach((duration, index) => {
+            setTimeout(() => {
+                updateProgressStep(index + 1);
+            }, stepDurations.slice(0, index + 1).reduce((a, b) => a + b, 0));
+        });
+    }
+    
+    // Start the animation
+    updateProgressStep(0);
+    animateProgress();
+    
+    // Store reference for cleanup
+    window.submissionProgressOverlay = progressOverlay;
+}
+    
+function updateSubmissionMessage(message) {
+    // Update the progress overlay if it exists
+    const overlay = document.getElementById('submission-progress-overlay');
+    if (overlay) {
+        const progressText = overlay.querySelector('p');
+        if (progressText) {
+            progressText.textContent = message;
+        }
+    }
+}
+
+function hideSubmissionProgress() {
+    // Remove the progress overlay
+    const overlay = window.submissionProgressOverlay || document.getElementById('submission-progress-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    
+    // Show the onboarding form again (in case of error)
+    const onboardingForm = document.getElementById('onboarding-form');
+    if (onboardingForm) {
+        onboardingForm.style.display = 'block';
+    }
+}
     
 // Global submission state to prevent duplicates
 let isSubmissionInProgress = false;
