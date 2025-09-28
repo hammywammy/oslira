@@ -502,12 +502,17 @@ setupModalObserver() {
 openBulkModal() {
     console.log('📊 [DashboardHeader] Opening bulk modal...');
     
-    const modal = document.querySelector('#bulkModal > div');
-    if (modal) {
-        modal.classList.remove('hidden');
-        console.log('✅ [DashboardHeader] Bulk modal opened');
+    // Use the modal manager if available to maintain state
+    if (window.dashboard?.container?.get('modalManager')) {
+        window.dashboard.container.get('modalManager').showBulkModal();
     } else {
-        console.error('❌ [DashboardHeader] Bulk modal element not found');
+        const modal = document.querySelector('#bulkModal > div');
+        if (modal) {
+            modal.classList.remove('hidden');
+            console.log('✅ [DashboardHeader] Bulk modal opened via direct DOM');
+        } else {
+            console.error('❌ [DashboardHeader] Bulk modal element not found');
+        }
     }
 }
 
