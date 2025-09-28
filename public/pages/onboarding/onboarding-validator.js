@@ -394,8 +394,6 @@ if (!processedValue || processedValue.trim().length === 0) continue;
     
 validateBusinessLogic(fieldId, value) {
         switch (fieldId) {
-            case 'company-name':
-                return this.rules.validateBusinessName(value);
             case 'business-name':
                 return this.rules.validateBusinessName(value);
                 
