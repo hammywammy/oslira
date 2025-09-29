@@ -10,7 +10,7 @@ export async function handlePublicConfig(c: Context): Promise<Response> {
     const configManager = getEnhancedConfigManager(c.env);
     
 // Determine environment from Worker env
-const environment = c.env.ENV || 'production';
+const environment = c.env.APP_ENV || c.env.ENV || 'production';
 const isProduction = environment === 'production';
 
 const publicConfig = {
