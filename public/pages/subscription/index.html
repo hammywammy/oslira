@@ -122,10 +122,10 @@
                     </div>
                 </div>
                 <div class="mt-4 md:mt-0 flex items-center gap-6">
-                    <div>
-                        <p class="text-sm text-gray-600">Next Billing</p>
-                        <p class="font-semibold text-gray-900">No active subscription</p>
-                    </div>
+<div>
+    <p class="text-sm text-gray-600">Next Billing</p>
+    <p class="font-semibold text-gray-900" id="next-billing-date">No active subscription</p>
+</div>
                     <button class="px-6 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors">
                         Manage Billing
                     </button>
@@ -503,10 +503,10 @@
                     <p class="font-semibold text-gray-900">-</p>
                 </div>
                 
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-sm text-gray-600 mb-1">Credits Remaining</p>
-                    <p class="font-semibold text-gray-900">25 / 25</p>
-                </div>
+<div class="bg-gray-50 rounded-xl p-4">
+    <p class="text-sm text-gray-600 mb-1">Credits Remaining</p>
+    <p class="font-semibold text-gray-900" id="credits-remaining">25 / 25</p>
+</div>
             </div>
             
             <div class="mt-6 flex flex-wrap gap-4">
@@ -527,35 +527,35 @@
             <h2 class="text-3xl font-bold text-gray-900 mb-6">Usage Overview</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-gray-600">Credits Used</span>
-                        <span class="text-sm font-semibold text-gray-900">0 / 25</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
-                    </div>
-                </div>
+               <div>
+    <div class="flex justify-between items-center mb-2">
+        <span class="text-sm text-gray-600">Credits Used</span>
+        <span class="text-sm font-semibold text-gray-900 usage-credits-text">0 / 25</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="usage-credits-bar bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+    </div>
+</div>
                 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-gray-600">Team Members</span>
-                        <span class="text-sm font-semibold text-gray-900">1 / 1</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-purple-600 h-2 rounded-full" style="width: 100%"></div>
-                    </div>
-                </div>
+<div>
+    <div class="flex justify-between items-center mb-2">
+        <span class="text-sm text-gray-600">Team Members</span>
+        <span class="text-sm font-semibold text-gray-900 usage-team-text">1 / 1</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="usage-team-bar bg-purple-600 h-2 rounded-full" style="width: 100%"></div>
+    </div>
+</div>
                 
-                <div>
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-gray-600">Days Until Renewal</span>
-                        <span class="text-sm font-semibold text-gray-900">N/A</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
-                    </div>
-                </div>
+<div>
+    <div class="flex justify-between items-center mb-2">
+        <span class="text-sm text-gray-600">Days Until Renewal</span>
+        <span class="text-sm font-semibold text-gray-900 usage-renewal-text">N/A</span>
+    </div>
+    <div class="w-full bg-gray-200 rounded-full h-2">
+        <div class="usage-renewal-bar bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+    </div>
+</div>
             </div>
         </div>
 
