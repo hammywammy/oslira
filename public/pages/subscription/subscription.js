@@ -137,11 +137,11 @@ async function initializeServices() {
     console.log('🔧 [Subscription] Initializing services...');
     
     try {
-        // Initialize Supabase (following auth pattern)
-        subscriptionState.supabase = window.supabase;
+        // Get Supabase client from OsliraAuth
+        subscriptionState.supabase = window.OsliraAuth.supabase();
         
-        // Initialize Stripe
-        if (window.OsliraConfig && window.OsliraConfig.STRIPE_PUBLIC_KEY) {
+        // Initialize Stripe if available
+        if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
             subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
         }
         
@@ -164,27 +164,23 @@ async function checkAuthentication() {
     console.log('🔐 [Subscription] Checking authentication...');
     
     try {
-        const { data: { session }, error } = await subscriptionState.supabase.auth.getSession();
-        
-        if (error) {
-            console.error('❌ [Subscription] Session error:', error);
+        // Use OsliraSimpleApp which already has auth state
+        if (!window.OsliraSimpleApp?.user) {
+            console.log('⚠️ [Subscription] No authenticated user in OsliraSimpleApp');
             redirectToAuth();
             return;
         }
         
-        if (!session) {
-            console.log('⚠️ [Subscription] No session found, redirecting to auth');
-            redirectToAuth();
-            return;
-        }
+        // Copy from OsliraSimpleApp
+        subscriptionState.currentUser = window.OsliraSimpleApp.user;
+        subscriptionState.currentSession = window.OsliraSimpleApp.session;
+        subscriptionState.supabase = window.OsliraAuth.supabase();
+        subscriptionState.config = window.OsliraConfig;
         
-        subscriptionState.currentSession = session;
-        subscriptionState.currentUser = session.user;
-        
-        console.log('✅ [Subscription] User authenticated:', session.user.email);
+        console.log('✅ [Subscription] User authenticated:', subscriptionState.currentUser.email);
         
         // Update UI with user info
-        updateUserInfo(session.user);
+        updateUserInfo(subscriptionState.currentUser);
         
     } catch (error) {
         console.error('❌ [Subscription] Auth check failed:', error);
