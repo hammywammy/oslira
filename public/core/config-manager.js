@@ -64,7 +64,8 @@ class ConfigManager {
         try {
             console.log('🌐 [Config] Loading from Netlify edge function...');
             
-            const response = await fetch('/api/public-config');
+            const workerUrl = window.OsliraEnv?.WORKER_URL || 'https://api-staging.oslira.com';
+const response = await fetch(`${workerUrl}/api/public-config`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
