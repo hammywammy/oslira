@@ -43,16 +43,49 @@ async function initializeSubscriptionPage() {
         setupEventListeners();
         
         // Initialize UI components
-        initializeUI();
-        
-        // Show content (following homepage pattern)
-        document.body.classList.add('show-content');
+// Initialize sidebar
+await initializeSidebar();
+
+// Initialize UI components
+initializeUI();
+
+// Show content (following homepage pattern)
+document.body.classList.add('show-content');
         
         console.log('✅ [Subscription] Page initialization complete');
         
     } catch (error) {
         console.error('❌ [Subscription] Initialization failed:', error);
         showErrorState('Failed to load subscription page. Please refresh and try again.');
+    }
+}
+
+async function initializeSidebar() {
+    try {
+        console.log('📋 [Subscription] Initializing modular sidebar...');
+        
+        // Wait for sidebarManager to be available
+        for (let i = 0; i < 50; i++) {
+            if (window.sidebarManager) {
+                console.log('✅ [Subscription] SidebarManager found');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!window.sidebarManager) {
+            console.warn('⚠️ [Subscription] SidebarManager not available after waiting, skipping sidebar');
+            return;
+        }
+        
+        // Render sidebar with correct selector
+        await window.sidebarManager.render('#sidebar-container');
+        
+        console.log('✅ [Subscription] Sidebar initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Sidebar initialization failed:', error);
+        // Don't throw - subscription page can work without sidebar
     }
 }
 
