@@ -30,19 +30,21 @@ async function initializeSubscriptionPage() {
         // Wait for core dependencies (following homepage pattern)
         await waitForDependencies();
         
-        // Initialize Supabase and Stripe
-        await initializeServices();
-        
-        // Setup authentication check
-        await checkAuthentication();
-        
-        // Load user subscription data
-        await loadSubscriptionData();
-        
-        // Setup event listeners
-        setupEventListeners();
-        
-        // Initialize UI components
+// Initialize Supabase and Stripe
+await initializeServices();
+
+// Setup authentication check
+await checkAuthentication();
+
+// Setup auth state monitoring AFTER services are initialized
+setupAuthStateMonitoring();
+
+// Load user subscription data
+await loadSubscriptionData();
+
+// Setup event listeners
+setupEventListeners();
+
 // Initialize sidebar
 await initializeSidebar();
 
@@ -770,18 +772,24 @@ window.openLiveChat = function() {
 // =============================================================================
 
 // Monitor auth state changes
-if (typeof window !== 'undefined' && window.supabase) {
-    window.supabase.auth.onAuthStateChange((event, session) => {
-        console.log('🔐 [Subscription] Auth state change:', event, session?.user?.email);
-        
-        if (event === 'SIGNED_OUT') {
-            window.location.href = '/auth';
-        } else if (event === 'SIGNED_IN' && session) {
-            subscriptionState.currentSession = session;
-            subscriptionState.currentUser = session.user;
-            loadSubscriptionData();
-        }
-    });
+function setupAuthStateMonitoring() {
+    // Use the supabase instance from subscriptionState, not window.supabase directly
+    if (subscriptionState.supabase && subscriptionState.supabase.auth) {
+        subscriptionState.supabase.auth.onAuthStateChange((event, session) => {
+            console.log('🔐 [Subscription] Auth state change:', event, session?.user?.email);
+            
+            if (event === 'SIGNED_OUT') {
+                window.location.href = '/auth';
+            } else if (event === 'SIGNED_IN' && session) {
+                subscriptionState.currentSession = session;
+                subscriptionState.currentUser = session.user;
+                loadSubscriptionData();
+            }
+        });
+        console.log('✅ [Subscription] Auth state monitoring setup');
+    } else {
+        console.warn('⚠️ [Subscription] Cannot setup auth monitoring - supabase not available');
+    }
 }
 
 // =============================================================================
