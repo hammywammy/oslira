@@ -140,8 +140,7 @@ home: {
 'subscription': {
     scripts: [
         '/core/api-client.js',
-        '/pages/subscription/subscription.js',
-        '/core/sidebar/sidebar-manager.js'
+        '/pages/subscription/subscription.js'
     ],
     requiresAuth: true,
     enableTailwind: true
