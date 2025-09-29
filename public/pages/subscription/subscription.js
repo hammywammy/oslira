@@ -283,15 +283,22 @@ function updateBillingInfo(subscription) {
 function updatePricingCards(currentPlan) {
     console.log('🎨 [Subscription] Updating pricing cards for plan:', currentPlan);
     
-   const pricingCards = document.querySelectorAll('.pricing-card');
+const pricingCards = document.querySelectorAll('.pricing-card');
 if (pricingCards.length === 0) {
     console.warn('⚠️ [Subscription] No pricing cards found in DOM');
     return;
 }
 
 pricingCards.forEach(card => {
-        const cardPlan = card.getAttribute('data-plan');
-        const button = card.querySelector('.card-button');
+    if (!card) return;
+    
+    const cardPlan = card.getAttribute('data-plan');
+    const button = card.querySelector('.card-button');
+    
+    if (!button) {
+        console.warn('⚠️ [Subscription] Card missing button:', cardPlan);
+        return;
+    }
         
         // Remove existing badges
         const existingBadge = card.querySelector('.current-badge');
