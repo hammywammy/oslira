@@ -107,17 +107,17 @@ async function loadSubscriptionData() {
     try {
         showLoading();
         
-        // Fetch user subscription data from database
-        const { data: profile, error: profileError } = await subscriptionState.supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', subscriptionState.currentUser.id)
-            .single();
-            
-        if (profileError) {
-            console.error('❌ [Subscription] Profile fetch error:', profileError);
-            throw profileError;
-        }
+// Fetch user subscription data from database
+const { data: profile, error: profileError } = await subscriptionState.supabase
+    .from('users')
+    .select('*')
+    .eq('id', subscriptionState.currentUser.id)
+    .single();
+    
+if (profileError) {
+    console.error('❌ [Subscription] Profile fetch error:', profileError);
+    throw profileError;
+}
         
         // Fetch subscription details
         const { data: subscription, error: subError } = await subscriptionState.supabase
