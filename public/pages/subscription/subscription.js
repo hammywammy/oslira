@@ -91,7 +91,7 @@ async function loadSubscriptionData() {
         // Fetch user profile with subscription_id
 const { data: profile, error: profileError } = await subscriptionState.supabase
     .from('users')
-    .select('*, credits_used_current_period, credit_period_start, subscription_id')
+    .select('*, credits_used_current_period, subscription_id')
             .eq('id', subscriptionState.currentUser.id)
             .single();
         
