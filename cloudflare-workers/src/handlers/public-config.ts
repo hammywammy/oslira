@@ -7,11 +7,13 @@ export async function handlePublicConfig(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
-    // Direct access to environment variables - no config manager needed for public config
+    const configManager = getEnhancedConfigManager(c.env);
+    
+    // Get only public configuration (never sensitive keys)
     const publicConfig = {
-      supabaseUrl: c.env.SUPABASE_URL,
-      supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-      stripePublishableKey: c.env.STRIPE_PUBLISHABLE_KEY,
+      supabaseUrl: await configManager.getConfig('SUPABASE_URL') || c.env.SUPABASE_URL,
+      supabaseAnonKey: await configManager.getConfig('SUPABASE_ANON_KEY') || c.env.SUPABASE_ANON_KEY,
+      stripePublishableKey: await configManager.getConfig('STRIPE_PUBLISHABLE_KEY') || c.env.STRIPE_PUBLISHABLE_KEY,
       workerUrl: c.env.WORKER_URL,
       environment: c.env.ENV || 'production'
     };
@@ -29,11 +31,17 @@ export async function handlePublicConfig(c: Context): Promise<Response> {
   } catch (error: any) {
     logger('error', 'Failed to serve public config', { error: error.message, requestId });
     
-    return new Response(JSON.stringify({
-      error: 'Failed to load configuration',
-      requestId
-    }), {
-      status: 500,
+    // Return basic fallback
+    const fallback = {
+      supabaseUrl: c.env.SUPABASE_URL || 'https://jswzzihuqtjqvobfosks.supabase.co',
+      supabaseAnonKey: c.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ3NjcsImV4cCI6MjA1MDU1MDc2N30.Z7EQBfC8N4QQjl8uIi-cGLM4-MJb4LrUa1Dz6kqBWPU',
+      stripePublishableKey: c.env.STRIPE_PUBLISHABLE_KEY,
+      workerUrl: c.env.WORKER_URL,
+      fallback: true
+    };
+    
+    return new Response(JSON.stringify(fallback), {
+      status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
