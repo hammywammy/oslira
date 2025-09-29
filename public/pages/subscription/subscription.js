@@ -123,12 +123,12 @@ if (profileError) {
         const { data: subscription, error: subError } = await subscriptionState.supabase
             .from('subscriptions')
             .select('*')
-            .eq('user_id', subscriptionState.currentUser.id)
-            .single();
+.eq('user_id', subscriptionState.currentUser.id)
+.maybeSingle();
             
-        if (subError && subError.code !== 'PGRST116') { // Not found is OK for free users
-            console.error('❌ [Subscription] Subscription fetch error:', subError);
-        }
+if (subError) {
+    console.error('❌ [Subscription] Subscription fetch error:', subError);
+}
         
         // Update state and UI
         subscriptionState.currentPlan = subscription?.plan_name || 'free';
@@ -283,7 +283,13 @@ function updateBillingInfo(subscription) {
 function updatePricingCards(currentPlan) {
     console.log('🎨 [Subscription] Updating pricing cards for plan:', currentPlan);
     
-    document.querySelectorAll('.pricing-card').forEach(card => {
+   const pricingCards = document.querySelectorAll('.pricing-card');
+if (pricingCards.length === 0) {
+    console.warn('⚠️ [Subscription] No pricing cards found in DOM');
+    return;
+}
+
+pricingCards.forEach(card => {
         const cardPlan = card.getAttribute('data-plan');
         const button = card.querySelector('.card-button');
         
