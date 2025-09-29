@@ -166,9 +166,9 @@ class SidebarManager {
 async fetchBusinessProfiles() {
     try {
         // Get current user
-        const user = window.OsliraAuth?.currentUser;
-        if (!user) {
-            console.warn('⚠️ [SidebarManager] No authenticated user');
+const user = window.OsliraAuth?.user;
+if (!user) {
+    console.warn('⚠️ [SidebarManager] No authenticated user');
             return [];
         }
         
