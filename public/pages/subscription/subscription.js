@@ -41,38 +41,46 @@ async function initializeSubscriptionPage() {
     try {
         console.log('🔧 [Subscription] Starting initialization sequence...');
         
-        // Wait for core dependencies (following homepage pattern)
+        // Wait for core systems
         await waitForDependencies();
         
-// Initialize Supabase and Stripe
-await initializeServices();
-
-// Setup authentication check
-await checkAuthentication();
-
-// Setup auth state monitoring AFTER services are initialized
-setupAuthStateMonitoring();
-
-// Load user subscription data
-await loadSubscriptionData();
-
-// Setup event listeners
-setupEventListeners();
-
-// Initialize sidebar
-await initializeSidebar();
-
-// Initialize UI components
-initializeUI();
-
-// Show content (following homepage pattern)
-document.body.classList.add('show-content');
+        // CRITICAL: Get auth from OsliraSimpleApp (already initialized by timing-manager)
+        if (!window.OsliraSimpleApp?.user) {
+            console.error('❌ [Subscription] No authenticated user');
+            window.location.href = '/auth';
+            return;
+        }
+        
+        // Populate state from already-initialized systems
+        subscriptionState.currentUser = window.OsliraSimpleApp.user;
+        subscriptionState.currentSession = window.OsliraSimpleApp.session;
+        subscriptionState.supabase = window.OsliraAuth.supabase();
+        subscriptionState.config = window.OsliraConfig;
+        
+        // Initialize Stripe if available
+        if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
+            subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
+        }
+        
+        console.log('✅ [Subscription] Auth state populated:', subscriptionState.currentUser.email);
+        
+        // Load subscription data
+        await loadSubscriptionData();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Initialize sidebar
+        await initializeSidebar();
+        
+        // Initialize UI
+        initializeUI();
         
         console.log('✅ [Subscription] Page initialization complete');
         
     } catch (error) {
         console.error('❌ [Subscription] Initialization failed:', error);
-        showErrorState('Failed to load subscription page. Please refresh and try again.');
+        showErrorState('Failed to load subscription page.');
     }
 }
 
