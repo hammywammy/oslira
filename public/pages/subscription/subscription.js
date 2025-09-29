@@ -20,70 +20,41 @@ let subscriptionState = {
 
 console.log('📦 [Subscription] Module executing...');
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🏗️ [Subscription] DOMContentLoaded fired!');
-    console.log('🔍 [Subscription] About to call initializeSubscriptionPage...');
-    initializeSubscriptionPage();
-});
-
-console.log('📦 [Subscription] DOMContentLoaded listener registered');
-
-// If DOM already loaded, initialize immediately
+// Single initialization point
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeSubscriptionPage);
 } else {
-    // DOM already loaded, run immediately
-    console.log('🏗️ [Subscription] DOM already loaded, initializing immediately...');
     initializeSubscriptionPage();
 }
 
 async function initializeSubscriptionPage() {
     try {
-        console.log('🔧 [Subscription] Starting initialization sequence...');
+        console.log('🔧 [Subscription] Starting initialization...');
         
-        // Wait for core systems
         await waitForDependencies();
         
-        // CRITICAL: Get auth from OsliraSimpleApp (already initialized by timing-manager)
-        if (!window.OsliraSimpleApp?.user) {
-            console.error('❌ [Subscription] No authenticated user');
-            window.location.href = '/auth';
-            return;
-        }
-        
-        // Populate state from already-initialized systems
         subscriptionState.currentUser = window.OsliraSimpleApp.user;
         subscriptionState.currentSession = window.OsliraSimpleApp.session;
         subscriptionState.supabase = window.OsliraAuth.supabase();
         subscriptionState.config = window.OsliraConfig;
         
-        // Initialize Stripe if available
         if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
             subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
         }
         
-        console.log('✅ [Subscription] Auth state populated:', subscriptionState.currentUser.email);
+        console.log('✅ [Subscription] Initialized:', subscriptionState.currentUser.email);
         
-        // Load subscription data
+        setupAuthStateMonitoring();
         await loadSubscriptionData();
-        
-        // Setup event listeners
         setupEventListeners();
-        
-        // Initialize sidebar
         await initializeSidebar();
-        
-        // Initialize UI
         initializeUI();
-        
-        console.log('✅ [Subscription] Page initialization complete');
         
     } catch (error) {
         console.error('❌ [Subscription] Initialization failed:', error);
-        showErrorState('Failed to load subscription page.');
+        showErrorState('Failed to load subscription page. Please email support@oslira.com');
     }
 }
-
 async function initializeSidebar() {
     try {
         console.log('📋 [Subscription] Initializing modular sidebar...');
@@ -120,12 +91,11 @@ async function initializeSidebar() {
 async function waitForDependencies() {
     console.log('⏳ [Subscription] Waiting for dependencies...');
     
-    // Wait for global objects to be available
     let attempts = 0;
     const maxAttempts = 50;
     
     while (attempts < maxAttempts) {
-        if (window.OsliraEnv && window.OsliraConfig && typeof window.supabase !== 'undefined') {
+        if (window.OsliraSimpleApp?.user && window.OsliraAuth?.supabase) {
             console.log('✅ [Subscription] Dependencies loaded');
             return;
         }
@@ -134,71 +104,7 @@ async function waitForDependencies() {
         attempts++;
     }
     
-    throw new Error('Dependencies failed to load within timeout');
-}
-
-// =============================================================================
-// SERVICE INITIALIZATION
-// =============================================================================
-
-async function initializeServices() {
-    console.log('🔧 [Subscription] Initializing services...');
-    
-    try {
-        // Get Supabase client from OsliraAuth
-        subscriptionState.supabase = window.OsliraAuth.supabase();
-        
-        // Initialize Stripe if available
-        if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
-            subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
-        }
-        
-        // Get config
-        subscriptionState.config = window.OsliraConfig;
-        
-        console.log('✅ [Subscription] Services initialized');
-        
-    } catch (error) {
-        console.error('❌ [Subscription] Service initialization failed:', error);
-        throw error;
-    }
-}
-
-// =============================================================================
-// AUTHENTICATION CHECK - FOLLOWS DASHBOARD PATTERN
-// =============================================================================
-
-async function checkAuthentication() {
-    console.log('🔐 [Subscription] Checking authentication...');
-    
-    try {
-        // Use OsliraSimpleApp which already has auth state
-        if (!window.OsliraSimpleApp?.user) {
-            console.log('⚠️ [Subscription] No authenticated user in OsliraSimpleApp');
-            redirectToAuth();
-            return;
-        }
-        
-        // Copy from OsliraSimpleApp
-        subscriptionState.currentUser = window.OsliraSimpleApp.user;
-        subscriptionState.currentSession = window.OsliraSimpleApp.session;
-        subscriptionState.supabase = window.OsliraAuth.supabase();
-        subscriptionState.config = window.OsliraConfig;
-        
-        console.log('✅ [Subscription] User authenticated:', subscriptionState.currentUser.email);
-        
-        // Update UI with user info
-        updateUserInfo(subscriptionState.currentUser);
-        
-    } catch (error) {
-        console.error('❌ [Subscription] Auth check failed:', error);
-        redirectToAuth();
-    }
-}
-
-function redirectToAuth() {
-    console.log('🔄 [Subscription] Redirecting to authentication...');
-    window.location.href = '/auth';
+    throw new Error('OsliraSimpleApp or OsliraAuth not available');
 }
 
 // =============================================================================
