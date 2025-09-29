@@ -532,11 +532,30 @@ async function createCheckoutSession(plan) {
 }
 
 function getPriceId(plan) {
-    const priceIds = {
+    const isProduction = window.OsliraEnv?.IS_PRODUCTION || false;
+    
+    // Test mode price IDs (staging/development)
+    const testPriceIds = {
+        'starter': 'price_1SCmaBJzvcRSqGG3RGL3WrRC',
+        'professional': 'price_1SCmafJzvcRSqGG3tzSaS6o1',
+        'agency': 'price_1SCmb3JzvcRSqGG3xTcq7w7E'
+    };
+    
+    // Live mode price IDs (production)
+    const livePriceIds = {
         'starter': 'price_1SCmN0JzvcRSqGG33DY89imT',
         'professional': 'price_1SCmNaJzvcRSqGG3VAcbi4Og',
         'agency': 'price_1SCmPWJzvcRSqGG35tZjdior'
     };
+    
+    const priceIds = isProduction ? livePriceIds : testPriceIds;
+    
+    console.log('🎫 [Subscription] Using price IDs:', {
+        environment: isProduction ? 'LIVE' : 'TEST',
+        plan: plan,
+        priceId: priceIds[plan]
+    });
+    
     return priceIds[plan];
 }
 
