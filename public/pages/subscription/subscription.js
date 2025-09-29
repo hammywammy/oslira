@@ -33,9 +33,17 @@ async function initializeSubscriptionPage() {
         subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
         
-if (window.OsliraConfig?.stripePublishableKey && typeof Stripe !== 'undefined') {
-    subscriptionState.stripe = Stripe(window.OsliraConfig.stripePublishableKey);
-}
+        // Get actual config object (ConfigManager instance requires .getConfig())
+        const actualConfig = await window.OsliraConfig.getConfig();
+        
+        if (actualConfig?.stripePublishableKey && typeof Stripe !== 'undefined') {
+            subscriptionState.stripe = Stripe(actualConfig.stripePublishableKey);
+            console.log('✅ [Subscription] Stripe initialized');
+        } else if (!actualConfig?.stripePublishableKey) {
+            console.error('❌ [Subscription] Missing Stripe publishable key');
+        } else if (typeof Stripe === 'undefined') {
+            console.error('❌ [Subscription] Stripe.js not loaded');
+        }
         
         console.log('✅ [Subscription] Initialized:', subscriptionState.currentUser.email);
         
