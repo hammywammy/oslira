@@ -27,6 +27,12 @@ app.get('/debug/raw-env', async (c) => {
   });
 });
 
+app.get('/debug/stripe-env-full', async (c) => {
+  const results: any = {
+    timestamp: new Date().toISOString(),
+    sections: {}
+  };
+
 
 // ===============================================================================
 // BASIC ENDPOINTS
