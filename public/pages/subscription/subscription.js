@@ -33,10 +33,9 @@ async function initializeSubscriptionPage() {
         subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
         
-        // Initialize Stripe if available
-        if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
-            subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
-        }
+if (window.OsliraConfig?.stripePublishableKey && typeof Stripe !== 'undefined') {
+    subscriptionState.stripe = Stripe(window.OsliraConfig.stripePublishableKey);
+}
         
         console.log('✅ [Subscription] Initialized:', subscriptionState.currentUser.email);
         
