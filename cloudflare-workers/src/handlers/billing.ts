@@ -70,8 +70,18 @@ export async function handleCreateCheckoutSession(c: Context): Promise<Response>
       return c.json(createStandardResponse(false, undefined, 'priceId and user_id are required', requestId), 400);
     }
 
-    // Get Stripe secret key from centralized config
-    const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env);
+// Get Stripe secret key based on environment
+const environment = c.env.ENV || 'production';
+const isProduction = environment === 'production';
+
+const stripeSecretKey = isProduction
+  ? (await getApiKey('STRIPE_LIVE_SECRET_KEY', c.env).catch(() => c.env.STRIPE_LIVE_SECRET_KEY))
+  : (await getApiKey('STRIPE_TEST_SECRET_KEY', c.env).catch(() => c.env.STRIPE_TEST_SECRET_KEY));
+
+if (!stripeSecretKey) {
+  logger('error', 'Stripe secret key not configured', { environment, requestId });
+  return c.json(createStandardResponse(false, undefined, 'Stripe not configured', requestId), 500);
+}
 
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
