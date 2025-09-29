@@ -173,7 +173,7 @@ if (!user) {
         }
         
         // Fetch businesses from Supabase
-        const { data: businesses, error } = await window.OsliraAuth.supabase()
+        const { data: businesses, error } = await window.OsliraAuth.supabase
             .from('business_profiles')
             .select('*')
             .eq('user_id', user.id)
