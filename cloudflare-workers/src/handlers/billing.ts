@@ -71,12 +71,12 @@ export async function handleCreateCheckoutSession(c: Context): Promise<Response>
     }
 
 // Get Stripe secret key based on environment
-const environment = c.env.ENV || 'production';
+const environment = c.env.APP_ENV || 'production';
 const isProduction = environment === 'production';
 
 const stripeSecretKey = isProduction
-  ? (await getApiKey('STRIPE_LIVE_SECRET_KEY', c.env).catch(() => c.env.STRIPE_LIVE_SECRET_KEY))
-  : (await getApiKey('STRIPE_TEST_SECRET_KEY', c.env).catch(() => c.env.STRIPE_TEST_SECRET_KEY));
+  ? await getApiKey(c.env, 'STRIPE_SECRET_KEY') || c.env.STRIPE_LIVE_SECRET_KEY
+  : await getApiKey(c.env, 'STRIPE_SECRET_KEY') || c.env.STRIPE_TEST_SECRET_KEY;
 
 if (!stripeSecretKey) {
   logger('error', 'Stripe secret key not configured', { environment, requestId });
