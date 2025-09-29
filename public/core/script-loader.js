@@ -139,6 +139,7 @@ home: {
             
 'subscription': {
     scripts: [
+        '/core/sidebar/sidebar-manager.js',  // ← ADD THIS FIRST, LIKE DASHBOARD
         '/core/api-client.js',
         '/pages/subscription/subscription.js'
     ],
