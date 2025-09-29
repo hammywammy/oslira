@@ -88,28 +88,48 @@ async function loadSubscriptionData() {
     try {
         showLoading();
         
-        // Fetch user profile
+        // Fetch user profile with subscription_id
         const { data: profile, error: profileError } = await subscriptionState.supabase
             .from('users')
-            .select('*')
+            .select('*, subscription_id, credits_used')
             .eq('id', subscriptionState.currentUser.id)
             .single();
         
         if (profileError) throw profileError;
         
-        // Fetch subscription
-        const { data: subscription, error: subError } = await subscriptionState.supabase
-            .from('subscriptions')
-            .select('*')
-            .eq('user_id', subscriptionState.currentUser.id)
-            .maybeSingle();
+        // Fetch subscription using subscription_id from user profile
+        let subscription = null;
+        if (profile.subscription_id) {
+            const { data: subData, error: subError } = await subscriptionState.supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('id', profile.subscription_id)
+                .single();
+            
+            if (subError) {
+                console.error('❌ [Subscription] Subscription fetch error:', subError);
+            } else {
+                subscription = subData;
+            }
+        }
         
-        if (subError) console.error('❌ [Subscription] Subscription fetch error:', subError);
+        // Determine current plan
+        let currentPlan = 'free';
+        if (subscription && subscription.status === 'active') {
+            currentPlan = subscription.plan?.toLowerCase() || 'free';
+        }
         
-        // Update state and UI
-        subscriptionState.currentPlan = subscription?.plan_name || 'free';
+        subscriptionState.currentPlan = currentPlan;
+        
+        console.log('📊 [Subscription] Loaded data:', {
+            plan: currentPlan,
+            subscription: subscription,
+            creditsUsed: profile.credits_used
+        });
+        
         updateSubscriptionUI(profile, subscription);
-        updatePricingCards(subscriptionState.currentPlan);
+        updatePricingCards(currentPlan);
+        updateUsageOverview(profile, subscription, currentPlan);
         
         console.log('✅ [Subscription] Data loaded successfully');
         
@@ -133,47 +153,51 @@ function updateSubscriptionUI(profile, subscription) {
         'starter': { name: 'Starter Plan', credits: '100', details: '100 monthly credits • Basic features' },
         'professional': { name: 'Professional Plan', credits: '300', details: '300 monthly credits • Advanced features' },
         'agency': { name: 'Agency Plan', credits: '1000', details: '1000 monthly credits • Premium features' },
-        'enterprise': { name: 'Enterprise Plan', credits: 'Unlimited', details: 'Unlimited credits • All features' }
+        'enterprise': { name: 'Enterprise Plan', credits: '5000+', details: '5000+ credits • All features' }
     };
     
     const currentPlanInfo = planInfo[subscriptionState.currentPlan] || planInfo['free'];
     
-    // Update plan name
-    const planNameElement = document.getElementById('current-plan-name');
-    if (planNameElement) planNameElement.textContent = currentPlanInfo.name;
+    // Update current plan header
+    const currentPlanElement = document.getElementById('current-plan');
+    if (currentPlanElement) {
+        currentPlanElement.textContent = subscription && subscription.status === 'active' 
+            ? currentPlanInfo.name 
+            : 'Plan Not Detected';
+    }
     
-    // Update plan details
-    const planDetailsElement = document.getElementById('plan-details');
-    if (planDetailsElement) planDetailsElement.textContent = currentPlanInfo.details;
+    // Update next billing info
+    const nextBillingText = document.querySelector('#next-billing-date')?.parentElement?.previousElementSibling;
+    if (subscription && subscription.status === 'active' && subscription.current_period_end) {
+        const nextBilling = new Date(subscription.current_period_end);
+        const nextBillingDate = document.getElementById('next-billing-date');
+        if (nextBillingDate) {
+            nextBillingDate.textContent = nextBilling.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+    } else {
+        const nextBillingElement = document.querySelector('.flex.items-center.gap-6 p');
+        if (nextBillingElement) {
+            nextBillingElement.textContent = 'No active subscription';
+        }
+    }
     
     // Update sidebar plan
     const sidebarPlanElement = document.getElementById('sidebar-plan');
     if (sidebarPlanElement) sidebarPlanElement.textContent = currentPlanInfo.name;
     
-    // Update billing info
+    // Update sidebar billing
     const sidebarBillingElement = document.getElementById('sidebar-billing');
-    if (subscription && sidebarBillingElement) {
+    if (subscription && subscription.status === 'active' && sidebarBillingElement) {
         const nextBilling = new Date(subscription.current_period_end);
         sidebarBillingElement.textContent = `Next billing: ${nextBilling.toLocaleDateString()}`;
     } else if (sidebarBillingElement) {
         sidebarBillingElement.textContent = 'Free plan - no billing';
     }
-    
-    // Update credits
-    const creditsElement = document.getElementById('credits-remaining');
-    if (creditsElement) {
-        const usedCredits = profile?.credits_used || 0;
-        const totalCredits = currentPlanInfo.credits;
-        
-        if (totalCredits === 'Unlimited') {
-            creditsElement.textContent = 'Unlimited';
-        } else {
-            const remaining = Math.max(0, parseInt(totalCredits) - usedCredits);
-            creditsElement.textContent = `${remaining} / ${totalCredits}`;
-        }
-    }
 }
-
 function updatePricingCards(currentPlan) {
     console.log('🎨 [Subscription] Updating pricing cards for plan:', currentPlan);
     
@@ -231,6 +255,98 @@ function updatePricingCards(currentPlan) {
             }
         }
     });
+}
+
+function updateUsageOverview(profile, subscription, currentPlan) {
+    console.log('📈 [Subscription] Updating usage overview...');
+    
+    // Credit limits by plan
+    const creditLimits = {
+        'free': 25,
+        'starter': 100,
+        'professional': 300,
+        'agency': 1000,
+        'enterprise': 5000
+    };
+    
+    const totalCredits = creditLimits[currentPlan] || 25;
+    const usedCredits = profile?.credits_used || 0;
+    const remainingCredits = Math.max(0, totalCredits - usedCredits);
+    const creditPercentage = (usedCredits / totalCredits) * 100;
+    
+    // Update credits display
+    const creditsUsedText = document.querySelector('.usage-credits-text');
+    if (creditsUsedText) {
+        creditsUsedText.textContent = `${usedCredits} / ${totalCredits}`;
+    }
+    
+    const creditsBar = document.querySelector('.usage-credits-bar');
+    if (creditsBar) {
+        creditsBar.style.width = `${Math.min(creditPercentage, 100)}%`;
+    }
+    
+    // Update credits remaining in billing info
+    const creditsRemainingElement = document.getElementById('credits-remaining');
+    if (creditsRemainingElement) {
+        creditsRemainingElement.textContent = `${remainingCredits} / ${totalCredits}`;
+    }
+    
+    // Team members (hardcoded for now - extend based on your team logic)
+    const teamLimits = {
+        'free': 1,
+        'starter': 1,
+        'professional': 3,
+        'agency': 10,
+        'enterprise': 999
+    };
+    
+    const teamLimit = teamLimits[currentPlan] || 1;
+    const teamMembersText = document.querySelector('.usage-team-text');
+    if (teamMembersText) {
+        teamMembersText.textContent = `1 / ${teamLimit}`;
+    }
+    
+    const teamBar = document.querySelector('.usage-team-bar');
+    if (teamBar) {
+        teamBar.style.width = `${(1 / teamLimit) * 100}%`;
+    }
+    
+    // Days until renewal
+    if (subscription && subscription.current_period_end) {
+        const endDate = new Date(subscription.current_period_end);
+        const today = new Date();
+        const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+        
+        const renewalText = document.querySelector('.usage-renewal-text');
+        if (renewalText) {
+            renewalText.textContent = `${Math.max(0, daysRemaining)} days`;
+        }
+        
+        const renewalBar = document.querySelector('.usage-renewal-bar');
+        if (renewalBar) {
+            // Assume 30-day billing cycle
+            const renewalPercentage = ((30 - daysRemaining) / 30) * 100;
+            renewalBar.style.width = `${Math.max(0, Math.min(renewalPercentage, 100))}%`;
+        }
+        
+        // Update next billing date in header
+        const nextBillingElement = document.getElementById('next-billing-date');
+        if (nextBillingElement) {
+            nextBillingElement.textContent = endDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+    } else {
+        const renewalText = document.querySelector('.usage-renewal-text');
+        if (renewalText) renewalText.textContent = 'N/A';
+        
+        const renewalBar = document.querySelector('.usage-renewal-bar');
+        if (renewalBar) renewalBar.style.width = '0%';
+    }
+    
+    console.log('✅ [Subscription] Usage overview updated');
 }
 
 // =============================================================================
