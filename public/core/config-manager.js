@@ -64,7 +64,7 @@ class ConfigManager {
         try {
             console.log('🌐 [Config] Loading from Netlify edge function...');
             
-            const response = await fetch('/api/config');
+            const response = await fetch('/api/public-config');
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
