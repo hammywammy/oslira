@@ -18,10 +18,24 @@ let subscriptionState = {
 // PAGE INITIALIZATION - FOLLOWS SCRIPT-LOADER PATTERN
 // =============================================================================
 
+console.log('📦 [Subscription] Module executing...');
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🏗️ [Subscription] Initializing subscription page...');
+    console.log('🏗️ [Subscription] DOMContentLoaded fired!');
+    console.log('🔍 [Subscription] About to call initializeSubscriptionPage...');
     initializeSubscriptionPage();
 });
+
+console.log('📦 [Subscription] DOMContentLoaded listener registered');
+
+// If DOM already loaded, initialize immediately
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSubscriptionPage);
+} else {
+    // DOM already loaded, run immediately
+    console.log('🏗️ [Subscription] DOM already loaded, initializing immediately...');
+    initializeSubscriptionPage();
+}
 
 async function initializeSubscriptionPage() {
     try {
