@@ -43,7 +43,7 @@ async function initializeSubscriptionPage() {
         
         subscriptionState.currentUser = window.OsliraApp.user;
         subscriptionState.currentSession = window.OsliraApp.session;
-        subscriptionState.supabase = window.OsliraAuth.supabase();
+        subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
         
         if (window.OsliraConfig?.STRIPE_PUBLIC_KEY && typeof Stripe !== 'undefined') {
