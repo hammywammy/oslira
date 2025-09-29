@@ -30,7 +30,7 @@ async function initializeSubscriptionPage() {
         // Populate state from global objects
         subscriptionState.currentUser = window.OsliraApp.user;
         subscriptionState.currentSession = window.OsliraApp.session;
-        subscriptionState.supabase = window.OsliraAuth.supabase();
+        subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
         
         // Initialize Stripe if available
@@ -434,7 +434,7 @@ function showErrorState(message) {
 // =============================================================================
 
 function setupAuthStateMonitoring() {
-    if (subscriptionState.supabase?.auth) {
+    if (subscriptionState.supabase) {
         subscriptionState.supabase.auth.onAuthStateChange((event, session) => {
             console.log('🔐 [Subscription] Auth state change:', event);
             
