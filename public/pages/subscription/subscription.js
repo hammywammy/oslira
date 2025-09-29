@@ -89,9 +89,9 @@ async function loadSubscriptionData() {
         showLoading();
         
         // Fetch user profile with subscription_id
-        const { data: profile, error: profileError } = await subscriptionState.supabase
-            .from('users')
-            .select('*, subscription_id, credits_used')
+const { data: profile, error: profileError } = await subscriptionState.supabase
+    .from('users')
+    .select('*, credits_used_current_period, credit_period_start, subscription_id')
             .eq('id', subscriptionState.currentUser.id)
             .single();
         
@@ -270,7 +270,7 @@ function updateUsageOverview(profile, subscription, currentPlan) {
     };
     
     const totalCredits = creditLimits[currentPlan] || 25;
-    const usedCredits = profile?.credits_used || 0;
+    const usedCredits = profile?.credits_used_current_period || 0;
     const remainingCredits = Math.max(0, totalCredits - usedCredits);
     const creditPercentage = (usedCredits / totalCredits) * 100;
     
