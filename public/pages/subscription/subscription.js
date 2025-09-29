@@ -415,21 +415,31 @@ async function handleManageBilling(e) {
     try {
         showLoading();
         
-        const response = await fetch('/api/create-portal-session', {
+        const workerUrl = window.OsliraEnv?.WORKER_URL || 'https://api-staging.oslira.com';
+        const endpoint = `${workerUrl}/billing/create-portal-session`;
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${subscriptionState.currentSession.access_token}`
             },
             body: JSON.stringify({
-                customer_id: subscriptionState.currentUser.id
+                customerId: subscriptionState.currentUser.stripe_customer_id,
+                returnUrl: `${window.location.origin}/subscription`
             })
         });
         
         if (!response.ok) throw new Error('Failed to create portal session');
         
-        const { url } = await response.json();
-        window.location.href = url;
+        const responseData = await response.json();
+        const portalUrl = responseData.data?.url || responseData.url;
+        
+        if (portalUrl) {
+            window.location.href = portalUrl;
+        } else {
+            throw new Error('No portal URL returned');
+        }
         
     } catch (error) {
         console.error('❌ [Subscription] Billing management failed:', error);
@@ -478,22 +488,44 @@ async function handlePlanSelection(e) {
 async function createCheckoutSession(plan) {
     console.log('🛒 [Subscription] Creating checkout session for:', plan);
     
-    const response = await fetch('/api/create-checkout-session', {
+    const workerUrl = window.OsliraEnv?.WORKER_URL || 'https://api-staging.oslira.com';
+    const endpoint = `${workerUrl}/billing/create-checkout-session`;
+    
+    const payload = {
+        priceId: getPriceId(plan),
+        user_id: subscriptionState.currentUser.id,
+        successUrl: `${window.location.origin}/subscription?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/subscription`
+    };
+    
+    console.log('📡 [Subscription] Calling:', endpoint);
+    
+    const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${subscriptionState.currentSession.access_token}`
         },
-        body: JSON.stringify({
-            plan_name: plan,
-            price_id: getPriceId(plan),
-            customer_email: subscriptionState.currentUser.email
-        })
+        body: JSON.stringify(payload)
     });
     
-    if (!response.ok) throw new Error('Failed to create checkout session');
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [Subscription] Backend error:', errorData);
+        throw new Error(errorData.error || 'Failed to create checkout session');
+    }
     
-    const { sessionId } = await response.json();
+    const responseData = await response.json();
+    console.log('✅ [Subscription] Backend response:', responseData);
+    
+    const sessionId = responseData.data?.sessionId || responseData.sessionId;
+    
+    if (!sessionId) {
+        console.error('❌ [Subscription] No sessionId in response:', responseData);
+        throw new Error('Backend did not return a session ID');
+    }
+    
+    console.log('🎫 [Subscription] Redirecting to Stripe checkout');
     
     const { error } = await subscriptionState.stripe.redirectToCheckout({ sessionId });
     if (error) throw error;
@@ -501,9 +533,9 @@ async function createCheckoutSession(plan) {
 
 function getPriceId(plan) {
     const priceIds = {
-        'starter': 'price_starter_monthly',
-        'professional': 'price_professional_monthly',
-        'agency': 'price_agency_monthly'
+        'starter': 'price_1SCmN0JzvcRSqGG33DY89imT',
+        'professional': 'price_1SCmNaJzvcRSqGG3VAcbi4Og',
+        'agency': 'price_1SCmPWJzvcRSqGG35tZjdior'
     };
     return priceIds[plan];
 }
