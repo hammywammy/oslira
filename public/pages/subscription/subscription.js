@@ -17,24 +17,32 @@ let subscriptionState = {
 // =============================================================================
 // PAGE INITIALIZATION - FOLLOWS SCRIPT-LOADER PATTERN
 // =============================================================================
-
 console.log('📦 [Subscription] Module executing...');
 
-// Single initialization point
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSubscriptionPage);
-} else {
-    initializeSubscriptionPage();
-}
+// Simple polling initialization - matches dashboard pattern
+const startSubscription = async () => {
+    console.log('🔧 [Subscription] Setting up initialization...');
+    
+    const pollForDependencies = setInterval(async () => {
+        if (window.OsliraApp?.user && window.OsliraAuth?.supabase) {
+            console.log('✅ [Subscription] Dependencies ready, initializing...');
+            clearInterval(pollForDependencies);
+            await initializeSubscriptionPage();
+        }
+    }, 100);
+    
+    setTimeout(() => {
+        clearInterval(pollForDependencies);
+        console.error('❌ [Subscription] Initialization timeout');
+    }, 10000);
+};
 
 async function initializeSubscriptionPage() {
     try {
         console.log('🔧 [Subscription] Starting initialization...');
         
-        await waitForDependencies();
-        
-        subscriptionState.currentUser = window.OsliraSimpleApp.user;
-        subscriptionState.currentSession = window.OsliraSimpleApp.session;
+        subscriptionState.currentUser = window.OsliraApp.user;
+        subscriptionState.currentSession = window.OsliraApp.session;
         subscriptionState.supabase = window.OsliraAuth.supabase();
         subscriptionState.config = window.OsliraConfig;
         
@@ -55,58 +63,35 @@ async function initializeSubscriptionPage() {
         showErrorState('Failed to load subscription page. Please email support@oslira.com');
     }
 }
+
 async function initializeSidebar() {
     try {
-        console.log('📋 [Subscription] Initializing modular sidebar...');
+        console.log('📋 [Subscription] Initializing sidebar...');
         
-        // Wait for sidebarManager to be available
-        for (let i = 0; i < 50; i++) {
-            if (window.sidebarManager) {
-                console.log('✅ [Subscription] SidebarManager found');
-                break;
-            }
+        let attempts = 0;
+        while (!window.sidebarManager && attempts < 50) {
             await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
         
-        if (!window.sidebarManager) {
-            console.warn('⚠️ [Subscription] SidebarManager not available after waiting, skipping sidebar');
-            return;
+        if (window.sidebarManager) {
+            await window.sidebarManager.render('#sidebar-container');
+            console.log('✅ [Subscription] Sidebar initialized');
+        } else {
+            console.warn('⚠️ [Subscription] Sidebar unavailable');
         }
-        
-        // Render sidebar with correct selector
-        await window.sidebarManager.render('#sidebar-container');
-        
-        console.log('✅ [Subscription] Sidebar initialized successfully');
         
     } catch (error) {
-        console.error('❌ [Subscription] Sidebar initialization failed:', error);
-        // Don't throw - subscription page can work without sidebar
+        console.error('❌ [Subscription] Sidebar failed:', error);
     }
 }
 
-// =============================================================================
-// DEPENDENCY MANAGEMENT - MATCHES HOMEPAGE PATTERN
-// =============================================================================
-
-async function waitForDependencies() {
-    console.log('⏳ [Subscription] Waiting for dependencies...');
-    
-    let attempts = 0;
-    const maxAttempts = 50;
-    
-    while (attempts < maxAttempts) {
-        if (window.OsliraSimpleApp?.user && window.OsliraAuth?.supabase) {
-            console.log('✅ [Subscription] Dependencies loaded');
-            return;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    throw new Error('OsliraSimpleApp or OsliraAuth not available');
+// Start immediately if DOM ready, otherwise wait
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startSubscription);
+} else {
+    startSubscription();
 }
-
 // =============================================================================
 // SUBSCRIPTION DATA LOADING
 // =============================================================================
