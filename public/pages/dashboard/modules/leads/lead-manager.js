@@ -165,9 +165,9 @@ created_at: latestRun?.created_at || lead.first_discovered_at, // Use run date, 
             this.lastRefresh = new Date().toISOString();
 
             // Update global cache
-            if (this.osliraApp.cache) {
-                this.osliraApp.cache.leads = enrichedLeads;
-                this.osliraApp.cache.lastRefresh = this.lastRefresh;
+            if (this.osliraAuth.cache) {
+                this.osliraAuth.cache.leads = enrichedLeads;
+                this.osliraAuth.cache.lastRefresh = this.lastRefresh;
             }
 
             console.log(`✅ [LeadManager] Final result: ${enrichedLeads.length} unique leads`);
@@ -203,7 +203,7 @@ created_at: latestRun?.created_at || lead.first_discovered_at, // Use run date, 
         const maxAttempts = timeout / 100;
         
         const checkUser = () => {
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (user && user.id) {
                 resolve(user);
                 return;
@@ -287,7 +287,7 @@ async waitForSupabaseClient(timeout = 3000) {
         let analysisData = null;
         
         try {
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (!user) throw new Error('No authenticated user');
             
             // Fetch from new 3-table structure
@@ -438,7 +438,7 @@ if (latestRun.payloads && latestRun.payloads.length > 0) {
         try {
             console.log('🗑️ [LeadManager] Deleting lead:', leadId);
             
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (!this.supabase || !user) {
                 throw new Error('Database connection failed');
             }
@@ -503,7 +503,7 @@ if (latestRun.payloads && latestRun.payloads.length > 0) {
         try {
             console.log(`🗑️ [LeadManager] Bulk deleting ${idsToDelete.length} leads`);
             
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (!this.supabase || !user) {
                 throw new Error('Database connection failed');
             }
