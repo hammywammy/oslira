@@ -3,7 +3,7 @@
 // Single source of truth for environment detection AND page detection
 // =============================================================================
 
-class OsliraEnvManager {
+class OsliraEnvManager { 
     constructor() {
         this.hostname = window.location.hostname;
         this.origin = window.location.origin;
