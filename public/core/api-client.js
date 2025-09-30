@@ -121,6 +121,10 @@ const config = {
     }
 }
     
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
     // Specific API methods
     async analyzeProfile(data) {
         return this.request('/v1/analyze', {
