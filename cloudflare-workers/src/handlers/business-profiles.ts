@@ -10,6 +10,20 @@ import { createStandardResponse } from '../utils/response.js';
 import { validateJWTToken, extractUserFromJWT } from '../utils/auth.js';
 
 // ===============================================================================
+// HELPER: GET SUPABASE CONFIG FROM AWS
+// ===============================================================================
+
+async function getSupabaseUrl(env: Env): Promise<string> {
+  const { getApiKey } = await import('../services/enhanced-config-manager.js');
+  return await getApiKey('SUPABASE_URL', env, env.APP_ENV);
+}
+
+async function getSupabaseServiceRole(env: Env): Promise<string> {
+  const { getApiKey } = await import('../services/enhanced-config-manager.js');
+  return await getApiKey('SUPABASE_SERVICE_ROLE', env, env.APP_ENV);
+}
+
+// ===============================================================================
 // INTERFACES
 // ===============================================================================
 
@@ -118,9 +132,10 @@ async function handleListProfiles(
   try {
     logger('info', 'Fetching user business profiles', { userId, requestId });
     
+    const supabaseUrl = await getSupabaseUrl(c.env);
     const response = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/business_profiles?select=*&user_id=eq.${userId}&is_active=eq.true&order=created_at.desc`,
-      { headers: createHeaders(c.env) }
+      `${supabaseUrl}/rest/v1/business_profiles?select=*&user_id=eq.${userId}&is_active=eq.true&order=created_at.desc`,
+      { headers: await createHeaders(c.env) }
     );
     
     if (!response.ok) {
@@ -152,9 +167,10 @@ async function handleGetProfile(
   try {
     logger('info', 'Fetching specific business profile', { userId, profileId, requestId });
     
+    const supabaseUrl = await getSupabaseUrl(c.env);
     const response = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/business_profiles?select=*&id=eq.${profileId}&user_id=eq.${userId}&is_active=eq.true`,
-      { headers: createHeaders(c.env) }
+      `${supabaseUrl}/rest/v1/business_profiles?select=*&id=eq.${profileId}&user_id=eq.${userId}&is_active=eq.true`,
+      { headers: await createHeaders(c.env) }
     );
     
     if (!response.ok) {
@@ -196,7 +212,6 @@ async function handleCreateProfile(
     // Sanitize and prepare data
     const profileData = sanitizeBusinessProfileData(body, userId);
     
-    
     logger('info', 'Profile data prepared for database', {
       userId,
       business_name: profileData.business_name,
@@ -206,11 +221,12 @@ async function handleCreateProfile(
     });
     
     // Insert into database
+    const supabaseUrl = await getSupabaseUrl(c.env);
     const response = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/business_profiles`,
+      `${supabaseUrl}/rest/v1/business_profiles`,
       {
         method: 'POST',
-        headers: createPreferHeaders(c.env, 'return=representation'),
+        headers: await createPreferHeaders(c.env, 'return=representation'),
         body: JSON.stringify(profileData)
       }
     );
@@ -282,11 +298,12 @@ async function handleUpdateProfile(
     updateData.updated_at = new Date().toISOString();
     
     // Update database
+    const supabaseUrl = await getSupabaseUrl(c.env);
     const response = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${profileId}&user_id=eq.${userId}`,
+      `${supabaseUrl}/rest/v1/business_profiles?id=eq.${profileId}&user_id=eq.${userId}`,
       {
         method: 'PATCH',
-        headers: createPreferHeaders(c.env, 'return=representation'),
+        headers: await createPreferHeaders(c.env, 'return=representation'),
         body: JSON.stringify(updateData)
       }
     );
@@ -340,11 +357,12 @@ async function handleDeleteProfile(
     logger('info', 'Soft deleting business profile', { userId, profileId, requestId });
     
     // Soft delete by setting is_active to false
+    const supabaseUrl = await getSupabaseUrl(c.env);
     const response = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${profileId}&user_id=eq.${userId}`,
+      `${supabaseUrl}/rest/v1/business_profiles?id=eq.${profileId}&user_id=eq.${userId}`,
       {
         method: 'PATCH',
-        headers: createPreferHeaders(c.env, 'return=representation'),
+        headers: await createPreferHeaders(c.env, 'return=representation'),
         body: JSON.stringify({ 
           is_active: false, 
           updated_at: new Date().toISOString() 
@@ -394,8 +412,8 @@ async function authenticateRequest(c: Context<{ Bindings: Env }>, requestId: str
       return { success: false, error: 'No valid authorization header' };
     }
     
-const token = authHeader.substring(7);
-const userResult = await extractUserFromJWT(token, c.env, requestId);
+    const token = authHeader.substring(7);
+    const userResult = await extractUserFromJWT(token, c.env, requestId);
     
     if (!userResult.isValid) {
       return { success: false, error: userResult.error };
@@ -519,11 +537,12 @@ function sanitizeBusinessProfileUpdateData(data: Partial<BusinessProfileData>) {
 
 async function updateUserOnboardingStatus(userId: string, env: Env, requestId: string) {
   try {
+    const supabaseUrl = await getSupabaseUrl(env);
     await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
+      `${supabaseUrl}/rest/v1/users?id=eq.${userId}`,
       {
         method: 'PATCH',
-        headers: createHeaders(env),
+        headers: await createHeaders(env),
         body: JSON.stringify({ onboarding_completed: true })
       }
     );
@@ -543,17 +562,19 @@ async function logAnalyticsEvent(event: any, env: Env, requestId: string) {
   }
 }
 
-function createHeaders(env: Env) {
+async function createHeaders(env: Env) {
+  const serviceRole = await getSupabaseServiceRole(env);
   return {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    apikey: serviceRole,
+    Authorization: `Bearer ${serviceRole}`,
     'Content-Type': 'application/json'
   };
 }
 
-function createPreferHeaders(env: Env, prefer: string) {
+async function createPreferHeaders(env: Env, prefer: string) {
+  const headers = await createHeaders(env);
   return {
-    ...createHeaders(env),
+    ...headers,
     Prefer: prefer
   };
 }
