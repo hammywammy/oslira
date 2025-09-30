@@ -1,283 +1,152 @@
 // =============================================================================
-// CONFIGURATION MANAGER - CENTRALIZED CONFIG LOADING
+// CONFIG MANAGER - THIN WRAPPER AROUND ENV-MANAGER
+// Simplified to trust that env-manager has already loaded config
 // =============================================================================
 
-class ConfigManager {
+class OsliraConfigManager {
     constructor() {
-        this.config = null;
-        this.isLoaded = false;
-        this.loadPromise = null;
+        this.config = {};
+        this.initialized = false;
         
-        // Start loading immediately
-        this.loadPromise = this.loadConfiguration();
+        console.log('🔧 [Config] Initializing config manager');
+        this.initialize();
     }
     
-    // =============================================================================
-    // MAIN CONFIGURATION LOADING
-    // =============================================================================
-    
-    async loadConfiguration() {
-        if (this.isLoaded) {
-            return this.config;
+    initialize() {
+        // Config should already be loaded by timing-manager's config-fetch phase
+        // Just copy values from env-manager
+        
+        if (!window.OsliraEnv) {
+            throw new Error('OsliraEnv not available - initialization order error');
         }
         
-        console.log('🔧 [Config] Starting configuration load...');
-        
-        try {
-            // Try loading from Netlify edge function first
-            this.config = await this.loadFromNetlifyEdge();
-            
-            if (!this.config) {
-                // Fallback to local config file
-                this.config = await this.loadFromLocalFile();
-            }
-            
-            if (!this.config) {
-                throw new Error('No configuration source available');
-            }
-            
-            // Process and validate config
-            this.processConfiguration();
-            
-            console.log('✅ [Config] Configuration loaded successfully');
-            this.isLoaded = true;
-            
-            return this.config;
-            
-        } catch (error) {
-            console.error('❌ [Config] Failed to load configuration:', error);
-            
-            // Use fallback configuration
-            this.config = this.getFallbackConfig();
-            this.processConfiguration();
-            this.isLoaded = true;
-            
-            return this.config;
-        }
-    }
-    
-    // =============================================================================
-    // LOADING METHODS
-    // =============================================================================
-    
-    async loadFromNetlifyEdge() {
-        try {
-            console.log('🌐 [Config] Loading from Netlify edge function...');
-            
-            const workerUrl = window.OsliraEnv?.WORKER_URL || 'https://api-staging.oslira.com';
-const response = await fetch(`${workerUrl}/api/public-config`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const config = await response.json();
-            console.log('✅ [Config] Loaded from Netlify edge function');
-            
-            return config;
-            
-        } catch (error) {
-            console.warn('⚠️  [Config] Netlify edge function failed:', error.message);
-            return null;
-        }
-    }
-    
-    async loadFromLocalFile() {
-        try {
-            console.log('📁 [Config] Loading from local config file...');
-            
-            // Try to load config.js file
-            const response = await fetch('/config.js');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const configText = await response.text();
-            
-            // Extract CONFIG object from the file
-            const configMatch = configText.match(/const\s+CONFIG\s*=\s*({[\s\S]*?});/);
-            
-            if (!configMatch) {
-                throw new Error('CONFIG object not found in config.js');
-            }
-            
-            const config = eval(`(${configMatch[1]})`);
-            console.log('✅ [Config] Loaded from local config file');
-            
-            return config;
-            
-        } catch (error) {
-            console.warn('⚠️  [Config] Local config file failed:', error.message);
-            return null;
-        }
-    }
-    
-getFallbackConfig() {
-    console.log('🔄 [Config] Using fallback configuration');
-    
-    return {
-        supabaseUrl: 'https://jswzzihuqtjqvobfosks.supabase.co',
-        supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ3NjcsImV4cCI6MjA1MDU1MDc2N30.Z7EQBfC8N4QQjl8uIi-cGLM4-MJb4LrUa1Dz6kqBWPU',
-        workerUrl: window.OsliraEnv?.WORKER_URL || 'https://api.oslira.com',
-        environment: window.OsliraEnv?.ENV || 'development',
-        fallback: true
-    };
-}
-    
-    // =============================================================================
-    // CONFIGURATION PROCESSING
-    // =============================================================================
-    
-    processConfiguration() {
-        if (!this.config) return;
-        
-        // Add environment context if available
-        if (window.OsliraEnv) {
-            console.log('🌍 [Config] Environment Detection:', {
-                detected: window.OsliraEnv.ENV,
-                page: window.OsliraEnv.CURRENT_PAGE,
-                production: window.OsliraEnv.IS_PRODUCTION
-            });
-            
-            this.config.environment = window.OsliraEnv.ENV;
-            this.config.currentPage = window.OsliraEnv.CURRENT_PAGE;
-            this.config.isProduction = window.OsliraEnv.IS_PRODUCTION;
-            this.config.baseUrl = window.OsliraEnv.BASE_URL;
-            this.config.authCallbackUrl = window.OsliraEnv.AUTH_CALLBACK_URL;
+        if (!window.OsliraEnv.configLoaded) {
+            console.warn('⚠️ [Config] Config not loaded yet - timing issue');
+            throw new Error('Config not loaded - should be loaded in config-fetch phase');
         }
         
-// Override worker URL with environment-specific one
-if (window.OsliraEnv?.WORKER_URL) {
-    this.config.workerUrl = window.OsliraEnv.WORKER_URL;
-    this.config.WORKER_URL = window.OsliraEnv.WORKER_URL; // Also set uppercase version for API client
-    
-    console.log('🔧 [Config] Worker URL set:', {
-        envWorkerUrl: window.OsliraEnv.WORKER_URL,
-        configWorkerUrl: this.config.workerUrl,
-        configWORKER_URL: this.config.WORKER_URL
-    });
-} else {
-    console.warn('⚠️ [Config] No WORKER_URL from environment:', window.OsliraEnv);
-}
+        // Copy all config from env-manager
+        this.config = {
+            // Environment info (synchronous, always available)
+            environment: window.OsliraEnv.ENV,
+            currentPage: window.OsliraEnv.CURRENT_PAGE,
+            isProduction: window.OsliraEnv.IS_PRODUCTION,
+            isStaging: window.OsliraEnv.IS_STAGING,
+            isDevelopment: window.OsliraEnv.IS_DEVELOPMENT,
+            baseUrl: window.OsliraEnv.BASE_URL,
+            authCallbackUrl: window.OsliraEnv.AUTH_CALLBACK_URL,
+            workerUrl: window.OsliraEnv.WORKER_URL,
+            
+            // Config from AWS (loaded async, now available)
+            supabaseUrl: window.OsliraEnv.SUPABASE_URL,
+            supabaseAnonKey: window.OsliraEnv.SUPABASE_ANON_KEY,
+            stripePublishableKey: window.OsliraEnv.STRIPE_PUBLISHABLE_KEY,
+            frontendUrl: window.OsliraEnv.FRONTEND_URL,
+            
+            // Uppercase aliases for compatibility
+            WORKER_URL: window.OsliraEnv.WORKER_URL,
+            SUPABASE_URL: window.OsliraEnv.SUPABASE_URL,
+            SUPABASE_ANON_KEY: window.OsliraEnv.SUPABASE_ANON_KEY
+        };
+        
+        this.initialized = true;
+        
+        console.log('✅ [Config] Configuration loaded:', {
+            environment: this.config.environment,
+            currentPage: this.config.currentPage,
+            workerUrl: this.config.workerUrl,
+            hasSupabaseUrl: !!this.config.supabaseUrl,
+            hasSupabaseKey: !!this.config.supabaseAnonKey,
+            hasStripeKey: !!this.config.stripePublishableKey
+        });
         
         // Validate required fields
         this.validateConfiguration();
     }
     
     validateConfiguration() {
-const required = ['supabaseUrl', 'supabaseAnonKey'];
-        const missing = required.filter(key => !this.config[key] || this.config[key].includes('placeholder'));
+        const required = ['supabaseUrl', 'supabaseAnonKey', 'workerUrl'];
+        const missing = required.filter(key => !this.config[key]);
         
         if (missing.length > 0) {
-            console.warn('⚠️  [Config] Missing or placeholder configuration:', missing);
-            
-            if (this.config.environment === 'production') {
-                console.error('🚨 [Config] Critical: Missing configuration in production');
-            }
+            console.error('🚨 [Config] Missing required configuration:', missing);
+            throw new Error(`Missing required config: ${missing.join(', ')}`);
         }
+        
+        console.log('✅ [Config] All required fields present');
     }
     
     // =============================================================================
     // PUBLIC API
     // =============================================================================
     
-    async getConfig() {
-        if (!this.isLoaded) {
-            await this.loadPromise;
-        }
-        return this.config;
-    }
-    
-    async get(key) {
-        const config = await this.getConfig();
-        return config[key];
-    }
-    
-async getSupabaseConfig() {
-    const config = await this.getConfig();
-    return {
-        url: config.supabaseUrl,
-        key: config.supabaseAnonKey || config.supabaseKey  // Support both key names
-    };
-}
-    
-    async getWorkerUrl() {
-        const config = await this.getConfig();
-        return config.workerUrl;
-    }
-    
-    isConfigLoaded() {
-        return this.isLoaded;
-    }
-    
-    // =============================================================================
-    // STAGING PASSWORD HANDLING
-    // =============================================================================
-    
-    async checkStagingAccess() {
-        if (!window.OsliraEnv?.IS_STAGING) {
-            return true; // Not staging, no check needed
+    get(key) {
+        if (!this.initialized) {
+            throw new Error('Config manager not initialized');
         }
         
-        const config = await this.getConfig();
-        
-        if (!config.stagingPassword) {
-            return true; // No password required
-        }
-        
-        // Check if already authenticated for staging
-        const stagingAuth = sessionStorage.getItem('staging-authenticated');
-        if (stagingAuth === 'true') {
-            return true;
-        }
-        
-        // Prompt for staging password
-        return this.promptStagingPassword(config.stagingPassword);
+        return this.config[key];
     }
     
-    async promptStagingPassword(correctPassword) {
-        const password = prompt('This is a staging environment. Please enter the access password:');
-        
-        if (!password) {
-            alert('Access denied. Redirecting to production site.');
-            window.location.href = 'https://oslira.com';
-            return false;
+    getAll() {
+        if (!this.initialized) {
+            throw new Error('Config manager not initialized');
         }
         
-        // Simple hash check (in production, this would be more secure)
-        const hashedPassword = await this.simpleHash(password);
-        const hashedCorrect = await this.simpleHash(correctPassword);
-        
-        if (hashedPassword === hashedCorrect) {
-            sessionStorage.setItem('staging-authenticated', 'true');
-            return true;
-        } else {
-            alert('Incorrect password. Redirecting to production site.');
-            window.location.href = 'https://oslira.com';
-            return false;
-        }
+        return { ...this.config };
     }
     
-    async simpleHash(str) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(str);
-        const hash = await crypto.subtle.digest('SHA-256', data);
-        return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    // Environment helpers
+    isProduction() {
+        return this.config.isProduction;
+    }
+    
+    isStaging() {
+        return this.config.isStaging;
+    }
+    
+    isDevelopment() {
+        return this.config.isDevelopment;
+    }
+    
+    getEnvironment() {
+        return this.config.environment;
+    }
+    
+    // Specific getters for common config
+    getWorkerUrl() {
+        return this.config.workerUrl;
+    }
+    
+    getSupabaseUrl() {
+        return this.config.supabaseUrl;
+    }
+    
+    getSupabaseAnonKey() {
+        return this.config.supabaseAnonKey;
+    }
+    
+    getStripePublishableKey() {
+        return this.config.stripePublishableKey;
+    }
+    
+    getCurrentPage() {
+        return this.config.currentPage;
+    }
+    
+    // Debug method
+    debug() {
+        console.group('🔧 [Config] Debug Information');
+        console.log('Initialized:', this.initialized);
+        console.log('Config:', this.config);
+        console.groupEnd();
     }
 }
 
 // =============================================================================
-// INITIALIZATION & GLOBAL EXPORT
+// GLOBAL SINGLETON
 // =============================================================================
 
-// Create global instance
-const configManager = new ConfigManager();
+window.OsliraConfig = new OsliraConfigManager();
 
-// Export to window for global access
-window.OsliraConfig = configManager;
-
-// Also export the configuration getter for immediate access
-window.getOsliraConfig = () => configManager.getConfig();
-
-console.log('🔧 [Config] ConfigManager initialized and exposed as window.OsliraConfig');
+console.log('🔧 [Config] Manager loaded and initialized');
