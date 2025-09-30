@@ -206,65 +206,40 @@ class ResearchHandlers {
                 submitButton.disabled = true;
             }
 
-            // Test worker connectivity first
-            console.log('🧪 [ResearchHandlers] Testing worker connectivity...');
-            try {
-                const healthResponse = await fetch(`${workerUrl}/health`, {
-                    method: 'GET'
-                });
-                
-                console.log('🔍 [ResearchHandlers] Health check status:', healthResponse.status);
-                
-                if (healthResponse.ok) {
-                    const healthData = await healthResponse.json();
-                    console.log('✅ [ResearchHandlers] Worker is reachable:', healthData);
-                } else {
-                    throw new Error('Worker health check failed');
-                }
-            } catch (healthError) {
-                console.error('💥 [ResearchHandlers] Worker not reachable:', healthError);
-                
-                // Reset button
-                if (submitButton) {
-                    submitButton.textContent = originalButtonText;
-                    submitButton.disabled = false;
-                }
-                return;
-            }
-
+// Test worker connectivity first
+console.log('🧪 [ResearchHandlers] Testing worker connectivity...');
+try {
+    const healthData = await window.OsliraAPI.request('/health', {
+        method: 'GET'
+    });
+    
+    console.log('✅ [ResearchHandlers] Worker is reachable:', healthData);
+} catch (healthError) {
+    console.error('💥 [ResearchHandlers] Worker not reachable:', healthError);
+    
+    // Reset button
+    if (submitButton) {
+        submitButton.textContent = originalButtonText;
+        submitButton.disabled = false;
+    }
+    return;
+}
             // Make the API call
             const apiUrl = `${workerUrl}/v1/analyze`;
             console.log('📡 [ResearchHandlers] API endpoint:', apiUrl);
 
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(apiPayload)
-            });
-            
-            console.log('📨 [ResearchHandlers] API response status:', response.status);
-            
-            // Reset button state
-            if (submitButton) {
-                submitButton.textContent = originalButtonText;
-                submitButton.disabled = false;
-            }
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ [ResearchHandlers] API error:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: errorText
-                });
-                return;
-            }
-            
-            const result = await response.json();
-            console.log('✅ [ResearchHandlers] API success:', result);
+const result = await window.OsliraAPI.request('/v1/analyze', {
+    method: 'POST',
+    body: JSON.stringify(apiPayload)
+});
+
+// Reset button state
+if (submitButton) {
+    submitButton.textContent = originalButtonText;
+    submitButton.disabled = false;
+}
+
+console.log('✅ [ResearchHandlers] API success:', result);
 
             // Close modal and refresh
             this.closeResearchModal();
