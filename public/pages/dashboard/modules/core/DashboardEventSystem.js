@@ -258,8 +258,8 @@ eventBus.on(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, async (data) => {
      * Show error message to user
      */
     static showUserError(message) {
-        if (window.OsliraApp?.showMessage) {
-            window.OsliraApp.showMessage(message, 'error');
+        if (window.osliraAuth?.showMessage) {
+            window.osliraAuth.showMessage(message, 'error');
         } else {
             console.error('User Error:', message);
         }
