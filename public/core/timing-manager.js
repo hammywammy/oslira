@@ -1,5 +1,5 @@
 // =============================================================================
-// TIMING MANAGER - CENTRALIZED INITIALIZATION CONTROL
+// TIMING MANAGER - CENTRALIZED INITIALIZATION CONTROL WITH CONFIG PHASE
 // =============================================================================
 
 class TimingManager {
@@ -11,90 +11,101 @@ class TimingManager {
         this.globalReadyState = 'initializing';
         
         this.setupInitPhases();
-        console.log('🕐 [TimingManager] Initialized');
+        console.log('🕐 [TimingManager] Initialized with config-fetch phase');
     }
     
-setupInitPhases() {
-    const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'unknown';
-    
-    // Phase 1: Core Environment (all pages)
-    this.addPhase('core', {
-        order: 1,
-        items: ['env-manager', 'config-manager', 'supabase'],
-        dependencies: [],
-        critical: true
-    });
-    
-    // Phase 2: Authentication (all pages except public)
-    this.addPhase('auth', {
-        order: 2,
-        items: ['auth-manager', 'simple-app'],
-        dependencies: ['core'],
-        critical: true
-    });
-    
-    // Only add dashboard phases for dashboard page
-    if (currentPage === 'dashboard') {
-        // Phase 3: Dashboard Infrastructure
-        this.addPhase('dashboard-core', {
+    setupInitPhases() {
+        const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'unknown';
+        
+        // Phase 0: Bootstrap (env-manager already loaded by HTML)
+        // env-manager.js is loaded directly in HTML before this script
+        
+        // Phase 1: Config Fetch - NEW PHASE
+        this.addPhase('config-fetch', {
+            order: 1,
+            items: ['config-loader'], // Special marker for async config load
+            dependencies: [],
+            critical: true
+        });
+        
+        // Phase 2: Core Environment (after config loaded)
+        this.addPhase('core', {
+            order: 2,
+            items: ['config-manager', 'supabase'],
+            dependencies: ['config-fetch'],
+            critical: true
+        });
+        
+        // Phase 3: Authentication (all pages except public)
+        this.addPhase('auth', {
             order: 3,
-            items: [
-                'DashboardCore',
-                'DashboardErrorSystem', 
-                'DashboardEventSystem',
-                'dependency-container',
-                'event-bus',
-                'state-manager'
-            ],
-            dependencies: ['auth'],
+            items: ['auth-manager', 'simple-app'],
+            dependencies: ['core'],
             critical: true
         });
         
-        // Phase 4: Business Logic
-        this.addPhase('business-logic', {
-            order: 4,
-            items: [
-                'business-manager',
-                'lead-manager',
-                'analysis-functions',
-                'realtime-manager'
-            ],
-            dependencies: ['dashboard-core'],
-            critical: true
-        });
-        
-        // Phase 5: UI Components
-        this.addPhase('ui-components', {
-            order: 5,
-            items: [
-                'lead-renderer',
-                'stats-calculator',
-                'modal-manager',
-                'dashboard-header',
-                'leads-table',
-                'stats-cards',
-                'insights-panel'
-            ],
-            dependencies: ['business-logic'],
-            critical: false
-        });
-        
-        // Phase 6: Features
-        this.addPhase('features', {
-            order: 6,
-            items: [
-                'analysis-queue',
-                'bulk-upload',
-                'analysis-modal',
-                'research-modal',
-                'lead-analysis-handlers',
-                'research-handlers'
-            ],
-            dependencies: ['ui-components'],
-            critical: false
-        });
+        // Only add dashboard phases for dashboard page
+        if (currentPage === 'dashboard') {
+            // Phase 4: Dashboard Infrastructure
+            this.addPhase('dashboard-core', {
+                order: 4,
+                items: [
+                    'DashboardCore',
+                    'DashboardErrorSystem', 
+                    'DashboardEventSystem',
+                    'dependency-container',
+                    'event-bus',
+                    'state-manager'
+                ],
+                dependencies: ['auth'],
+                critical: true
+            });
+            
+            // Phase 5: Business Logic
+            this.addPhase('business-logic', {
+                order: 5,
+                items: [
+                    'business-manager',
+                    'lead-manager',
+                    'analysis-functions',
+                    'realtime-manager'
+                ],
+                dependencies: ['dashboard-core'],
+                critical: true
+            });
+            
+            // Phase 6: UI Components
+            this.addPhase('ui-components', {
+                order: 6,
+                items: [
+                    'lead-renderer',
+                    'stats-calculator',
+                    'modal-manager',
+                    'dashboard-header',
+                    'leads-table',
+                    'stats-cards',
+                    'insights-panel'
+                ],
+                dependencies: ['business-logic'],
+                critical: false
+            });
+            
+            // Phase 7: Features
+            this.addPhase('features', {
+                order: 7,
+                items: [
+                    'analysis-queue',
+                    'bulk-upload',
+                    'analysis-modal',
+                    'research-modal',
+                    'lead-analysis-handlers',
+                    'research-handlers'
+                ],
+                dependencies: ['ui-components'],
+                critical: false
+            });
+        }
     }
-}
     
     addPhase(name, config) {
         this.initPhases.set(name, {
@@ -138,9 +149,16 @@ setupInitPhases() {
         phaseConfig.startTime = Date.now();
         
         try {
-            // Initialize all items in parallel within the phase
-            const initPromises = phaseConfig.items.map(item => this.initializeItem(item));
-            await Promise.all(initPromises);
+            // Special handling for config-fetch phase
+            if (phaseName === 'config-fetch') {
+                console.log('⏳ [TimingManager] Waiting for async config load...');
+                await window.OsliraEnv.ready();
+                console.log('✅ [TimingManager] Config loaded successfully');
+            } else {
+                // Initialize all items in parallel within the phase
+                const initPromises = phaseConfig.items.map(item => this.initializeItem(item));
+                await Promise.all(initPromises);
+            }
             
             phaseConfig.status = 'completed';
             phaseConfig.endTime = Date.now();
@@ -201,185 +219,23 @@ setupInitPhases() {
     }
     
     async performItemInit(itemName) {
-        console.log(`📦 [TimingManager] Initializing: ${itemName}`);
-        
-        try {
-            // Wait for script to be loaded by ScriptLoader
-            await this.waitForScript(itemName);
-            
-            // Perform item-specific initialization
-            await this.initializeSpecificItem(itemName);
-            
-            console.log(`✅ [TimingManager] ${itemName} initialized`);
-            
-        } catch (error) {
-            console.error(`❌ [TimingManager] ${itemName} initialization failed:`, error);
-            throw error;
-        }
-    }
-    
-    async waitForScript(scriptName) {
         return new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = 100; // 10 seconds
-            
-            const checkScript = () => {
-                if (window.ScriptLoader?.isLoaded(scriptName)) {
-                    resolve();
-                } else if (attempts >= maxAttempts) {
-                    reject(new Error(`Script ${scriptName} failed to load within timeout`));
-                } else {
-                    attempts++;
-                    setTimeout(checkScript, 100);
-                }
-            };
-            
-            checkScript();
-        });
-    }
-    
-    async initializeSpecificItem(itemName) {
-        // Supabase client resolution
-        if (itemName === 'supabase') {
-            await this.initializeSupabaseClient();
-            return;
-        }
-
-        // Dashboard header needs special handling
-if (itemName === 'dashboard-header') {
-    await this.initializeDashboardHeader();
-    return;
-}
-        
-        // Authentication system
-        if (itemName === 'auth-manager') {
-            await this.waitForGlobal('OsliraAuth', 5000);
-            return;
-        }
-        
-        // Business manager initialization
-        if (itemName === 'business-manager') {
-            await this.initializeBusinessManager();
-            return;
-        }
-        
-        // Lead manager initialization  
-        if (itemName === 'lead-manager') {
-            await this.initializeLeadManager();
-            return;
-        }
-        
-// Simple-app needs special handling since it creates OsliraApp with user data
-        if (itemName === 'simple-app') {
-            await this.waitForSimpleApp();
-            return;
-        }
-        
-        // Default: just wait for global to be available
-        const globalName = this.getGlobalName(itemName);
-        if (globalName) {
-            await this.waitForGlobal(globalName, 3000);
-        }
-    }
-async waitForSimpleApp() {
-    // First wait for OsliraSimpleApp to exist
-    await this.waitForGlobal('OsliraSimpleApp', 3000);
-    
-    // Then manually initialize it since we control the timing
-    try {
-        console.log('🚀 [TimingManager] Manually initializing OsliraSimpleApp...');
-        await window.OsliraSimpleApp.initialize();
-        console.log('✅ [TimingManager] OsliraSimpleApp initialized');
-        return;
-    } catch (error) {
-        console.error('❌ [TimingManager] Failed to initialize OsliraSimpleApp:', error);
-        throw new Error('OsliraSimpleApp failed to initialize within timeout');
-    }
-}
-    
-async initializeSupabaseClient() {
-    let attempts = 0;
-    while (attempts < 50) {
-        if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-            const client = window.SimpleAuth.supabase();
-            if (client?.from && typeof client.from === 'function') {
-                window.OsliraSupabaseClient = client;
-                console.log('✅ [TimingManager] Supabase client resolved and registered');
-                return;
-            }
-        }
-        
-        // Also check auth manager client
-        if (window.OsliraAuth?.supabase?.from) {
-            window.OsliraSupabaseClient = window.OsliraAuth.supabase;
-            console.log('✅ [TimingManager] Supabase client resolved from auth manager');
-            return;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    // Don't throw - graceful degradation
-    console.warn('⚠️ [TimingManager] Supabase client not available - database features disabled');
-    window.OsliraSupabaseClient = null;
-}
-    
-    async initializeBusinessManager() {
-        await this.waitForGlobal('BusinessManager', 3000);
-        // Business manager should NOT auto-load data during init
-        console.log('✅ [TimingManager] BusinessManager ready (data loading deferred)');
-    }
-    
-    async initializeLeadManager() {
-        await this.waitForGlobal('LeadManager', 3000);
-        // Lead manager should NOT auto-load data during init
-        console.log('✅ [TimingManager] LeadManager ready (data loading deferred)');
-    }
-
-async initializeDashboardHeader() {
-    await this.waitForGlobal('DashboardHeader', 3000);
-    
-    // Wait for container to have the header instance
-    let attempts = 0;
-    while (attempts < 50) {
-        const container = window.dashboard?.container;
-        if (container) {
-            // Force instantiate the header factory if it doesn't exist
-            let header = null;
-            try {
-                header = container.get('dashboardHeader');
-            } catch (error) {
-                // Factory not instantiated yet, trigger it
-                console.log('🔧 [TimingManager] Instantiating DashboardHeader factory...');
-            }
-            
-            if (header) {
-                if (!header.initialized) {
-                    await header.initialize();
-                    console.log('✅ [TimingManager] DashboardHeader initialized properly');
-                }
-                return;
-            }
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    console.warn('⚠️ [TimingManager] DashboardHeader container instance not found');
-}
-    
-    async waitForGlobal(globalName, timeout = 3000) {
-        return new Promise((resolve, reject) => {
-            let attempts = 0;
-            const maxAttempts = timeout / 100;
+            const timeout = setTimeout(() => {
+                reject(new Error(`Timeout waiting for ${itemName}`));
+            }, 10000);
             
             const checkGlobal = () => {
-                if (window[globalName]) {
-                    resolve(window[globalName]);
-                } else if (attempts >= maxAttempts) {
-                    reject(new Error(`Global ${globalName} not available within ${timeout}ms`));
+                const globalName = this.getGlobalName(itemName);
+                
+                if (globalName && typeof window[globalName] !== 'undefined') {
+                    clearTimeout(timeout);
+                    console.log(`✓ [TimingManager] ${itemName} ready`);
+                    resolve();
+                } else if (itemName === 'config-loader') {
+                    // Special case: config-loader doesn't have a global
+                    clearTimeout(timeout);
+                    resolve();
                 } else {
-                    attempts++;
                     setTimeout(checkGlobal, 100);
                 }
             };
@@ -388,19 +244,26 @@ async initializeDashboardHeader() {
         });
     }
     
-getGlobalName(scriptName) {
-    const globalMappings = {
-        'env-manager': 'OsliraEnv',
-        'config-manager': 'OsliraConfig', 
-        'auth-manager': 'OsliraAuth',
-        'simple-app': 'OsliraSimpleApp', // Use OsliraSimpleApp directly, not alias
-        'business-manager': 'BusinessManager',
-        'lead-manager': 'LeadManager',
-        'modal-manager': 'ModalManager'
-    };
-    
-    return globalMappings[scriptName];
-}
+    getGlobalName(scriptName) {
+        const globalMappings = {
+            'env-manager': 'OsliraEnv',
+            'config-manager': 'OsliraConfig', 
+            'auth-manager': 'OsliraAuth',
+            'simple-app': 'OsliraSimpleApp',
+            'business-manager': 'BusinessManager',
+            'lead-manager': 'LeadManager',
+            'modal-manager': 'ModalManager',
+            'supabase': 'supabase',
+            'DashboardCore': 'DashboardCore',
+            'DashboardErrorSystem': 'DashboardErrorSystem',
+            'DashboardEventSystem': 'DashboardEventSystem',
+            'dependency-container': 'DependencyContainer',
+            'event-bus': 'EventBus',
+            'state-manager': 'StateManager'
+        };
+        
+        return globalMappings[scriptName];
+    }
     
     dispatchReadyEvent() {
         const event = new CustomEvent('oslira:timing:ready', {
@@ -450,4 +313,5 @@ window.addEventListener('oslira:scripts:loaded', async () => {
         console.error('❌ [TimingManager] Global initialization failed:', error);
     }
 });
+
 console.log('🕐 [TimingManager] Module loaded and ready');
