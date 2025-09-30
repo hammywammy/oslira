@@ -119,16 +119,13 @@ if (!publicConfig.FRONTEND_URL) missingKeys.push('frontendUrl');
 
     // Return minimal fallback config from environment variables
     // This allows system to degrade gracefully if AWS is unavailable
-    const fallbackConfig = {
-      success: false,
-      error: 'Configuration service temporarily unavailable',
-      fallback: {
-        supabaseUrl: c.env.SUPABASE_URL || '',
-        supabaseAnonKey: c.env.SUPABASE_ANON_KEY || '',
-        stripePublishableKey: c.env.STRIPE_PUBLISHABLE_KEY || '',
-        frontendUrl: c.env.FRONTEND_URL || '',
-        environment: c.env.APP_ENV || 'production'
-      },
+const fallbackConfig = {
+  success: false,
+  error: 'Configuration service temporarily unavailable - AWS Secrets Manager unreachable',
+  environment: c.env.APP_ENV || 'production',
+  timestamp: new Date().toISOString(),
+  requestId
+};
       timestamp: new Date().toISOString(),
       requestId
     };
