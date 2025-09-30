@@ -279,17 +279,13 @@ async loadCoreScripts() {
     // Phase 4: Auth & App
     console.log('📦 [ScriptLoader] Phase 4: Auth & App');
     
-    await this.loadScript('auth-manager', '/core/auth-manager.js');
-    if (!window.OsliraAuth) {
-        throw new Error('auth-manager failed to expose OsliraAuth global');
-    }
-    await this.wait(100);
-    
-    await this.loadScript('simple-app', '/core/simple-app.js');
-    if (!window.OsliraSimpleApp) {
-        throw new Error('simple-app failed to expose OsliraSimpleApp global');
-    }
-    await this.wait(100);
+await this.loadScript('auth-manager', '/core/auth-manager.js');
+if (!window.OsliraAuth) {
+    throw new Error('auth-manager failed to expose OsliraAuth global');
+}
+await this.wait(100);
+
+// simple-app.js removed - no longer needed
     
     console.log('✅ [ScriptLoader] All core scripts loaded');
 }
