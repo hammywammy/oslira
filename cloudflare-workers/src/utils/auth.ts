@@ -5,6 +5,7 @@
 
 import type { Env } from '../types/interfaces.js';
 import { logger } from './logger.js';
+import { createClient } from '@supabase/supabase-js';
 
 interface JWTPayload {
   sub: string;
@@ -27,49 +28,27 @@ interface AuthResult {
 // JWT TOKEN VALIDATION
 // ===============================================================================
 
-export async function validateJWTToken(token: string, env: Env): Promise<AuthResult> {
+export async function validateJWTToken(token: string, env: Env, requestId: string): Promise<boolean> {
   try {
-    // Parse JWT header to get algorithm
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return { isValid: false, error: 'Invalid JWT format' };
+    const supabaseUrl = await getApiKey('SUPABASE_URL', env);
+    const supabaseKey = await getApiKey('SUPABASE_ANON_KEY', env);
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Verify token using Supabase's built-in verification
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      logger('warn', 'Invalid JWT token', { error: error?.message, requestId });
+      return false;
     }
-
-    const header = JSON.parse(atob(parts[0]));
-    const payload = JSON.parse(atob(parts[1])) as JWTPayload;
-
-    // Check basic token structure
-    if (!payload.sub || !payload.exp || !payload.aud) {
-      return { isValid: false, error: 'Invalid JWT payload' };
-    }
-
-    // Check expiration
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp <= now) {
-      return { isValid: false, error: 'Token expired' };
-    }
-
-    // Check audience (should match your Supabase project)
-    const expectedAudience = 'authenticated';
-    if (payload.aud !== expectedAudience) {
-      return { isValid: false, error: 'Invalid audience' };
-    }
-
-    // Verify signature using Supabase JWT secret
-    const isSignatureValid = await verifyJWTSignature(token, env);
-    if (!isSignatureValid) {
-      return { isValid: false, error: 'Invalid signature' };
-    }
-
-    return {
-      isValid: true,
-      userId: payload.sub,
-      email: payload.email
-    };
-
+    
+    logger('info', 'JWT token validated', { userId: user.id, requestId });
+    return true;
+    
   } catch (error: any) {
-    logger('error', 'JWT validation failed', { error: error.message });
-    return { isValid: false, error: 'Token validation failed' };
+    logger('error', 'JWT validation failed', { error: error.message, requestId });
+    return false;
   }
 }
 
