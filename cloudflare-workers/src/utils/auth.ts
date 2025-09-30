@@ -29,27 +29,8 @@ interface AuthResult {
 // ===============================================================================
 
 export async function validateJWTToken(token: string, env: Env, requestId: string): Promise<boolean> {
-  try {
-    const supabaseUrl = await getApiKey('SUPABASE_URL', env);
-    const supabaseKey = await getApiKey('SUPABASE_ANON_KEY', env);
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Verify token using Supabase's built-in verification
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      logger('warn', 'Invalid JWT token', { error: error?.message, requestId });
-      return false;
-    }
-    
-    logger('info', 'JWT token validated', { userId: user.id, requestId });
-    return true;
-    
-  } catch (error: any) {
-    logger('error', 'JWT validation failed', { error: error.message, requestId });
-    return false;
-  }
+  const result = await extractUserFromJWT(token, env, requestId);
+  return result.isValid;
 }
 
 // ===============================================================================
@@ -82,8 +63,33 @@ async function verifyJWTSignature(token: string, env: Env): Promise<boolean> {
 // EXTRACT USER FROM JWT
 // ===============================================================================
 
-export async function extractUserFromJWT(token: string, env: Env): Promise<AuthResult> {
-  return validateJWTToken(token, env);
+export async function extractUserFromJWT(token: string, env: Env, requestId: string = 'default'): Promise<AuthResult> {
+  try {
+    const supabaseUrl = await getApiKey('SUPABASE_URL', env);
+    const supabaseKey = await getApiKey('SUPABASE_ANON_KEY', env);
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Verify token using Supabase's built-in verification
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      logger('warn', 'Invalid JWT token', { error: error?.message, requestId });
+      return { isValid: false, error: 'Invalid or expired token' };
+    }
+    
+    logger('info', 'JWT token validated', { userId: user.id, email: user.email, requestId });
+    
+    return {
+      isValid: true,
+      userId: user.id,
+      email: user.email
+    };
+    
+  } catch (error: any) {
+    logger('error', 'JWT extraction failed', { error: error.message, requestId });
+    return { isValid: false, error: 'Authentication failed' };
+  }
 }
 
 // ===============================================================================
