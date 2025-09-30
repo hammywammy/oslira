@@ -81,15 +81,11 @@ if (!user) {
     return;
 }
 
-// Create OsliraApp alias for backwards compatibility
-window.OsliraApp = {
-    user: user,
-    supabase: window.OsliraAuth.supabase,
-    getCurrentUser: () => window.OsliraAuth.user,
-    getSession: () => window.OsliraAuth.session
-};
-
-console.log('✅ [Dashboard] OsliraApp compatibility layer created');
+        // Direct reference - no compatibility layer needed
+// Modules should use window.OsliraAuth directly
+// Business property now available at window.OsliraAuth.business
+        
+console.log('✅ [Dashboard] OsliraAuth compatibility layer created');
         
         // Create and initialize the dashboard app
         this.app = new DashboardApp();
@@ -499,7 +495,7 @@ const startDashboard = async () => {
         // Polling with shorter interval for faster response
         console.log('📄 [Dashboard] Setting up dependency polling...');
         const pollForDependencies = setInterval(async () => {
-            if (window.OsliraApp && window.SimpleAuth && !dashboardInitializer.initialized) {
+            if (window.OsliraAuth && window.SimpleAuth && !dashboardInitializer.initialized) {
                 console.log('📄 [Dashboard] Dependencies detected via polling, initializing...');
                 clearInterval(pollForDependencies);
                 await dashboardInitializer.init();
