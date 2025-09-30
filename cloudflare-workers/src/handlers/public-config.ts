@@ -144,7 +144,7 @@ const fallbackConfig = {
       }
     );
   }
-}
+
 
 /**
  * Handle OPTIONS preflight requests for CORS
