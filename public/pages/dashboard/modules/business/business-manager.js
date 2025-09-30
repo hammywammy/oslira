@@ -127,9 +127,9 @@ return businesses;
 if (selectedBusiness) {
     this.stateManager.setState('selectedBusiness', selectedBusiness);
     
-    // Also update global OsliraApp for backward compatibility
-    if (this.osliraApp) {
-        this.osliraApp.business = selectedBusiness;
+    // Update auth manager with current business
+    if (window.OsliraAuth) {
+        window.OsliraAuth.business = selectedBusiness;
     }
     
     console.log('✅ [BusinessManager] Active business set:', selectedBusiness.business_name);
@@ -159,19 +159,19 @@ if (selectedBusiness) {
                 throw new Error('Business not found');
             }
             
-            // Update state
-            this.stateManager.setState('selectedBusiness', business);
-            
-            // Persist selection
-            localStorage.setItem('selectedBusinessId', businessId);
-            
-            // Update global OsliraApp
-            if (this.osliraApp) {
-                this.osliraApp.business = business;
-            }
-            
-            // Emit business change event
-            this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_CHANGED, {
+// Update state
+this.stateManager.setState('selectedBusiness', business);
+
+// Persist selection
+localStorage.setItem('selectedBusinessId', businessId);
+
+// Update auth manager with selected business
+if (window.OsliraAuth) {
+    window.OsliraAuth.business = business;
+}
+
+// Emit business change event
+this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_CHANGED, {
                 business,
                 businessId,
                 previousBusinessId: this.stateManager.getState('selectedBusiness')?.id
@@ -568,14 +568,14 @@ businessSelect.innerHTML = optionsHTML;
         this.businessCache.clear();
         this.lastBusinessRefresh = null;
         
-        // Clear localStorage
-        localStorage.removeItem('selectedBusinessId');
-        
-        // Update global OsliraApp
-        if (this.osliraApp) {
-            this.osliraApp.business = null;
-            this.osliraApp.businesses = [];
-        }
+// Clear localStorage
+localStorage.removeItem('selectedBusinessId');
+
+// Clear business from auth manager
+if (window.OsliraAuth) {
+    window.OsliraAuth.business = null;
+    window.OsliraAuth.businesses = [];
+}
     }
     
     refreshBusinessCache() {
