@@ -63,6 +63,23 @@ class OsliraConfigManager {
         // Validate required fields
         this.validateConfiguration();
     }
+
+    // Supabase config getter for auth-manager
+getSupabaseConfig() {
+    if (!this.initialized) {
+        throw new Error('Config manager not initialized');
+    }
+    
+    return {
+        url: this.config.supabaseUrl,
+        key: this.config.supabaseAnonKey
+    };
+}
+
+// Async version for compatibility
+async getConfig() {
+    return this.config;
+}
     
     validateConfiguration() {
         const required = ['supabaseUrl', 'supabaseAnonKey', 'workerUrl'];
