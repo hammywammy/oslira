@@ -53,17 +53,19 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
       return c.json(createStandardResponse(false, undefined, 'keyName and newValue are required', requestId), 400);
     }
     
-    // Validate keyName against allowed keys
-    const allowedKeys = [
-      'OPENAI_API_KEY', 
-      'CLAUDE_API_KEY', 
-      'APIFY_API_TOKEN', 
-      'STRIPE_SECRET_KEY', 
-      'STRIPE_WEBHOOK_SECRET',
-      'STRIPE_PUBLISHABLE_KEY',
-      'WORKER_URL',
-      'NETLIFY_BUILD_HOOK_URL'
-    ];
+// Only AWS-managed keys can be updated via admin panel
+const allowedKeys = [
+  'SUPABASE_URL',
+  'FRONTEND_URL',
+  'APIFY_API_TOKEN',
+  'CLAUDE_API_KEY',
+  'OPENAI_API_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_PUBLISHABLE_KEY',
+  'SUPABASE_SERVICE_ROLE',
+  'SUPABASE_ANON_KEY'
+];
     
     if (!allowedKeys.includes(keyName)) {
       return c.json(createStandardResponse(false, undefined, 'Invalid key name', requestId), 400);
@@ -78,9 +80,11 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     // Get user info from session if available
     const userEmail = c.req.header('X-User-Email') || 'admin-panel';
     
-    // Update configuration using enhanced config manager
-    const configManager = getEnhancedConfigManager(c.env);
-    await configManager.updateConfig(keyName, newValue, userEmail);
+// Update configuration using enhanced config manager
+// MUST specify environment (production or staging)
+const environment = c.env.APP_ENV || 'production';
+const configManager = getEnhancedConfigManager(c.env);
+await configManager.updateConfig(keyName, newValue, environment, userEmail);
     
     // Test the key to ensure it's working
     const testResult = await testApiKey(keyName, newValue, c.env);
