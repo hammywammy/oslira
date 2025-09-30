@@ -14,7 +14,8 @@
     "clean:backups": "find . -name '*.backup.*' -delete && echo '✅ Backup files cleaned'"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "hono": "^4.0.0"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.0",
