@@ -117,33 +117,34 @@
         }
         
         // Process callback when scripts are loaded
-        window.addEventListener('oslira:scripts:loaded', async () => {
-            try {
-                console.log('🔐 [Callback] Scripts loaded, processing OAuth callback...');
-                
-                // Update status
-                updateStatus('Processing authentication...');
-                
-                // Wait for auth system to be ready
-                if (!window.SimpleAuth) {
-                    throw new Error('Auth system not available');
-                }
-                
-                // Initialize auth system
-                await window.SimpleAuth.initialize();
-                
-                // Check for OAuth callback parameters in URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const urlHash = window.location.hash;
-                
-                console.log('🔐 [Callback] URL params:', urlParams.toString());
-                console.log('🔐 [Callback] URL hash:', urlHash);
-                
-                // Check if we have OAuth parameters (Supabase handles this automatically)
-                updateStatus('Verifying credentials...');
-                
-// Use auth manager's callback handler
-const result = await window.OsliraAuth.handleCallback();
+     // Process callback when scripts are loaded
+window.addEventListener('oslira:scripts:loaded', async () => {
+    try {
+        console.log('🔐 [Callback] Scripts loaded, processing OAuth callback...');
+        
+        // Update status
+        updateStatus('Processing authentication...');
+        
+        // Wait for auth system to be ready
+        if (!window.OsliraAuth) {
+            throw new Error('Auth system not available');
+        }
+        
+        // Wait for auth system to fully initialize
+        await window.OsliraAuth.waitForAuth();
+        
+        // Check for OAuth callback parameters in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlHash = window.location.hash;
+        
+        console.log('🔐 [Callback] URL params:', urlParams.toString());
+        console.log('🔐 [Callback] URL hash:', urlHash);
+        
+        // Check if we have OAuth parameters (Supabase handles this automatically)
+        updateStatus('Verifying credentials...');
+        
+        // Use auth manager's callback handler
+        const result = await window.OsliraAuth.handleCallback();
 
 if (result && result.session) {
     console.log('✅ [Callback] Authentication successful');
