@@ -1,21 +1,33 @@
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
+import { getApiKey } from './enhanced-config-manager.js';
 
 // ===============================================================================
 // SHARED UTILITIES
 // ===============================================================================
 
-const createHeaders = (env: Env) => ({
-  apikey: env.SUPABASE_SERVICE_ROLE,
-  Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-  'Content-Type': 'application/json'
-});
+async function createHeaders(env: Env): Promise<Record<string, string>> {
+  const serviceRole = await getApiKey('SUPABASE_SERVICE_ROLE', env, env.APP_ENV);
+  
+  return {
+    apikey: serviceRole,
+    Authorization: `Bearer ${serviceRole}`,
+    'Content-Type': 'application/json'
+  };
+}
 
-const createPreferHeaders = (env: Env, prefer: string) => ({
-  ...createHeaders(env),
-  Prefer: prefer
-});
+async function createPreferHeaders(env: Env, prefer: string): Promise<Record<string, string>> {
+  const headers = await createHeaders(env);
+  return {
+    ...headers,
+    Prefer: prefer
+  };
+}
+
+async function getSupabaseUrl(env: Env): Promise<string> {
+  return await getApiKey('SUPABASE_URL', env, env.APP_ENV);
+}
 
 // ===============================================================================
 // LEADS TABLE OPERATIONS
@@ -32,17 +44,17 @@ export async function upsertLead(
     });
 
     logger('info', 'Upserting lead record', { 
-  username: leadData.username,
-  business_id: leadData.business_id,
-  raw_following_data: {
-    followingCount: leadData.followingCount,
-    following_count: leadData.following_count,
-    postsCount: leadData.postsCount,
-    posts_count: leadData.posts_count,
-    followersCount: leadData.followersCount,
-    followers_count: leadData.followers_count
-  }
-});
+      username: leadData.username,
+      business_id: leadData.business_id,
+      raw_following_data: {
+        followingCount: leadData.followingCount,
+        following_count: leadData.following_count,
+        postsCount: leadData.postsCount,
+        posts_count: leadData.posts_count,
+        followersCount: leadData.followersCount,
+        followers_count: leadData.followers_count
+      }
+    });
 
     const cleanLeadData = {
       user_id: leadData.user_id,
@@ -53,42 +65,40 @@ export async function upsertLead(
       bio_text: leadData.bio || null,
       external_website_url: leadData.external_url || leadData.externalUrl || null,
       
-  follower_count: parseInt(leadData.followersCount || leadData.follower_count || '0'),
-  following_count: parseInt(leadData.followsCount || leadData.followingCount || leadData.following_count || '0'),
-  post_count: parseInt(leadData.postsCount || leadData.post_count || '0'),
+      follower_count: parseInt(leadData.followersCount || leadData.follower_count || '0'),
+      following_count: parseInt(leadData.followsCount || leadData.followingCount || leadData.following_count || '0'),
+      post_count: parseInt(leadData.postsCount || leadData.post_count || '0'),
       
-      // Profile attributes
       is_verified_account: leadData.is_verified || leadData.isVerified || false,
       is_private_account: leadData.is_private || leadData.isPrivate || false,
       is_business_account: leadData.is_business_account || leadData.isBusinessAccount || false,
       
-      // Platform info
       platform_type: 'instagram',
       profile_url: leadData.profile_url || `https://instagram.com/${leadData.username}`,
       
-      // Update timestamp
       last_updated_at: new Date().toISOString()
     };
 
     logger('info', 'Clean lead data before upsert', {
-  username: cleanLeadData.username,
-  follower_count: cleanLeadData.followersCount,
-  following_count: cleanLeadData.following_count,
-  post_count: cleanLeadData.post_count,
-  original_fields_available: {
-    followingCount: !!leadData.followingCount,
-    following_count: !!leadData.following_count,
-    postsCount: !!leadData.postsCount,
-    posts_count: !!leadData.posts_count
-  }
-});
+      username: cleanLeadData.username,
+      follower_count: cleanLeadData.follower_count,
+      following_count: cleanLeadData.following_count,
+      post_count: cleanLeadData.post_count,
+      original_fields_available: {
+        followingCount: !!leadData.followingCount,
+        following_count: !!leadData.following_count,
+        postsCount: !!leadData.postsCount,
+        posts_count: !!leadData.posts_count
+      }
+    });
 
-    // Use UPSERT to handle duplicates
-    const upsertQuery = `${env.SUPABASE_URL}/rest/v1/leads?on_conflict=user_id,username,business_id`;
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createPreferHeaders(env, 'return=representation,resolution=merge-duplicates');
+    const upsertQuery = `${supabaseUrl}/rest/v1/leads?on_conflict=user_id,username,business_id`;
 
     const leadResponse = await fetch(upsertQuery, {
       method: 'POST',
-      headers: createPreferHeaders(env, 'return=representation,resolution=merge-duplicates'),
+      headers,
       body: JSON.stringify(cleanLeadData)
     });
 
@@ -132,19 +142,17 @@ export async function insertAnalysisRun(
       score: analysisResult.score
     });
 
-const runData = {
+    const runData = {
       lead_id,
       user_id,
       business_id,
       analysis_type: analysisType,
       analysis_version: '1.0',
       
-      // Universal scores (required for all analysis types)
       overall_score: Math.round(parseFloat(analysisResult.score) || 0),
       niche_fit_score: Math.round(parseFloat(analysisResult.niche_fit) || 0),
       engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
       
-// Quick reference data - Use AI's actual summary with score context
       summary_text: analysisResult.summary || 
                    analysisResult.quick_summary || 
                    analysisResult.summary_text ||
@@ -153,7 +161,6 @@ const runData = {
                        parseFloat(analysisResult.confidence) || 
                        (analysisType === 'light' ? 0.6 : analysisType === 'deep' ? 0.75 : 0.85),
       
-      // Processing metadata
       run_status: 'completed',
       ai_model_used: analysisResult.pipeline_metadata?.workflow_used || 'pipeline_system',
       analysis_completed_at: new Date().toISOString()
@@ -167,9 +174,13 @@ const runData = {
       summary_length: runData.summary_text?.length,
       confidence_is_number: typeof runData.confidence_level === 'number'
     });
-    const runResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/runs`, {
+
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createPreferHeaders(env, 'return=representation');
+    
+    const runResponse = await fetch(`${supabaseUrl}/rest/v1/runs`, {
       method: 'POST',
-      headers: createPreferHeaders(env, 'return=representation'),
+      headers,
       body: JSON.stringify(runData)
     });
 
@@ -214,39 +225,36 @@ export async function insertAnalysisPayload(
       dataKeys: Object.keys(analysisData || {}).length
     });
 
-    // Structure payload based on analysis type
     let structuredPayload;
     
     switch (analysisType) {        
-case 'deep':
-    // Handle both old flat structure and new nested deep_payload structure
-    const deepData = analysisData.deep_payload || analysisData;
-    const engagementData = deepData.engagement_breakdown || {};
-    
-    structuredPayload = {
-        deep_summary: deepData.deep_summary || null,
-        selling_points: deepData.selling_points || [],
-        outreach_message: deepData.outreach_message || null,
-        engagement_breakdown: {
+      case 'deep':
+        const deepData = analysisData.deep_payload || analysisData;
+        const engagementData = deepData.engagement_breakdown || {};
+        
+        structuredPayload = {
+          deep_summary: deepData.deep_summary || null,
+          selling_points: deepData.selling_points || [],
+          outreach_message: deepData.outreach_message || null,
+          engagement_breakdown: {
             avg_likes: parseInt(engagementData.avg_likes) || parseInt(analysisData.avg_likes) || 0,
             avg_comments: parseInt(engagementData.avg_comments) || parseInt(analysisData.avg_comments) || 0,
             engagement_rate: parseFloat(engagementData.engagement_rate) || parseFloat(analysisData.engagement_rate) || 0
-        },
-        latest_posts: deepData.latest_posts || null,
-        audience_insights: deepData.audience_insights || analysisData.engagement_insights || null,
-        reasons: deepData.reasons || []
-    };
-    break;
+          },
+          latest_posts: deepData.latest_posts || null,
+          audience_insights: deepData.audience_insights || analysisData.engagement_insights || null,
+          reasons: deepData.reasons || []
+        };
+        break;
         
-case 'xray':
-  // Extract from xray_payload if it exists, otherwise from root
-  const xrayData = analysisData.xray_payload || analysisData;
-  structuredPayload = {
-    copywriter_profile: xrayData.copywriter_profile || {},
-    commercial_intelligence: xrayData.commercial_intelligence || {},
-    persuasion_strategy: xrayData.persuasion_strategy || {}
-  };
-  break;
+      case 'xray':
+        const xrayData = analysisData.xray_payload || analysisData;
+        structuredPayload = {
+          copywriter_profile: xrayData.copywriter_profile || {},
+          commercial_intelligence: xrayData.commercial_intelligence || {},
+          persuasion_strategy: xrayData.persuasion_strategy || {}
+        };
+        break;
         
       default:
         structuredPayload = analysisData;
@@ -262,9 +270,12 @@ case 'xray':
       data_size_bytes: JSON.stringify(structuredPayload).length
     };
 
-    const payloadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/payloads`, {
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createPreferHeaders(env, 'return=representation');
+    
+    const payloadResponse = await fetch(`${supabaseUrl}/rest/v1/payloads`, {
       method: 'POST',
-      headers: createPreferHeaders(env, 'return=representation'),
+      headers,
       body: JSON.stringify(payloadData)
     });
 
@@ -290,7 +301,7 @@ case 'xray':
 }
 
 // ===============================================================================
-// MAIN SAVE FUNCTION (Replaces saveLeadAndAnalysis)
+// MAIN SAVE FUNCTION
 // ===============================================================================
 
 export async function saveCompleteAnalysis(
@@ -305,20 +316,17 @@ export async function saveCompleteAnalysis(
       analysisType
     });
 
-    // Step 1: Upsert lead record
     const lead_id = await upsertLead(leadData, env);
 
-    // Step 2: Insert analysis run
     const run_id = await insertAnalysisRun(
       lead_id,
       leadData.user_id,
       leadData.business_id,
       analysisType,
-      analysisData, // Always use analysisData parameter
+      analysisData,
       env
     );
 
-    // Step 3: Insert analysis payload (if we have analysis data)
     if (analysisData && (analysisType === 'deep' || analysisType === 'xray')) {
       await insertAnalysisPayload(
         run_id,
@@ -331,7 +339,7 @@ export async function saveCompleteAnalysis(
       );
     }
 
-logger('info', 'Complete analysis save successful', { 
+    logger('info', 'Complete analysis save successful', { 
       lead_id, 
       run_id, 
       analysisType 
@@ -356,17 +364,12 @@ export async function getDashboardLeads(
   limit: number = 50
 ): Promise<any[]> {
   try {
-    const query = `
-      ${env.SUPABASE_URL}/rest/v1/leads?
-      select=lead_id,username,display_name,profile_picture_url,follower_count,is_verified_account,
-      runs(run_id,analysis_type,overall_score,niche_fit_score,engagement_score,summary_text,confidence_level,created_at)
-      &user_id=eq.${user_id}
-      &business_id=eq.${business_id}
-      &order=runs.created_at.desc
-      &limit=${limit}
-    `;
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+    
+    const query = `${supabaseUrl}/rest/v1/leads?select=lead_id,username,display_name,profile_picture_url,follower_count,is_verified_account,runs(run_id,analysis_type,overall_score,niche_fit_score,engagement_score,summary_text,confidence_level,created_at)&user_id=eq.${user_id}&business_id=eq.${business_id}&order=runs.created_at.desc&limit=${limit}`;
 
-    const response = await fetch(query, { headers: createHeaders(env) });
+    const response = await fetch(query, { headers });
 
     if (!response.ok) {
       throw new Error(`Dashboard query failed: ${response.status}`);
@@ -389,14 +392,12 @@ export async function getAnalysisDetails(
   env: Env
 ): Promise<any> {
   try {
-    const query = `
-      ${env.SUPABASE_URL}/rest/v1/runs?
-      select=*,leads(*),payloads(analysis_data)
-      &run_id=eq.${run_id}
-      &leads.user_id=eq.${user_id}
-    `;
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+    
+    const query = `${supabaseUrl}/rest/v1/runs?select=*,leads(*),payloads(analysis_data)&run_id=eq.${run_id}&leads.user_id=eq.${user_id}`;
 
-    const response = await fetch(query, { headers: createHeaders(env) });
+    const response = await fetch(query, { headers });
 
     if (!response.ok) {
       throw new Error(`Analysis details query failed: ${response.status}`);
@@ -417,7 +418,7 @@ export async function getAnalysisDetails(
 }
 
 // ===============================================================================
-// CREDIT SYSTEM (ENHANCED WITH SHARED HEADERS)
+// CREDIT SYSTEM
 // ===============================================================================
 
 export async function updateCreditsAndTransaction(
@@ -437,12 +438,12 @@ export async function updateCreditsAndTransaction(
   env: Env,
   lead_id?: string
 ): Promise<void> {
-  const headers = createHeaders(env);
-
   try {
-    // Get current user data to calculate new balance
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+
     const userResponse = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?select=credits&id=eq.${user_id}`,
+      `${supabaseUrl}/rest/v1/users?select=credits&id=eq.${user_id}`,
       { headers }
     );
 
@@ -458,9 +459,8 @@ export async function updateCreditsAndTransaction(
     const currentCredits = users[0].credits || 0;
     const newBalance = Math.max(0, currentCredits - cost);
 
-    // Update user credits
     await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+      `${supabaseUrl}/rest/v1/users?id=eq.${user_id}`,
       {
         method: 'PATCH',
         headers,
@@ -469,14 +469,13 @@ export async function updateCreditsAndTransaction(
       10000
     );
 
-// Create transaction record with enhanced cost tracking
     const transactionData = {
       user_id,
       amount: -cost,
       type: 'use',
       description: `${analysisType} analysis`,
       run_id: run_id,
-actual_cost: costDetails.actual_cost,
+      actual_cost: costDetails.actual_cost,
       tokens_in: costDetails.tokens_in,
       tokens_out: costDetails.tokens_out,
       model_used: costDetails.model_used,
@@ -495,7 +494,7 @@ actual_cost: costDetails.actual_cost,
     });
 
     await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+      `${supabaseUrl}/rest/v1/credit_transactions`,
       {
         method: 'POST',
         headers,
@@ -507,8 +506,7 @@ actual_cost: costDetails.actual_cost,
     logger('info', 'Credits and transaction updated successfully', { 
       user_id, 
       cost, 
-      newBalance,
-      margin: transactionData.margin 
+      newBalance
     });
 
   } catch (error: any) {
@@ -519,9 +517,12 @@ actual_cost: costDetails.actual_cost,
 
 export async function fetchUserAndCredits(user_id: string, env: Env): Promise<any> {
   try {
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+    
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?select=*&id=eq.${user_id}`,
-      { headers: createHeaders(env) }
+      `${supabaseUrl}/rest/v1/users?select=*&id=eq.${user_id}`,
+      { headers }
     );
 
     if (!response.ok) {
@@ -548,9 +549,12 @@ export async function fetchUserAndCredits(user_id: string, env: Env): Promise<an
 
 export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<any> {
   try {
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+    
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*,business_one_liner,business_context_pack,context_version,context_updated_at&id=eq.${business_id}&user_id=eq.${user_id}`,
-      { headers: createHeaders(env) }
+      `${supabaseUrl}/rest/v1/business_profiles?select=*,business_one_liner,business_context_pack,context_version,context_updated_at&id=eq.${business_id}&user_id=eq.${user_id}`,
+      { headers }
     );
 
     if (!response.ok) {
@@ -572,9 +576,12 @@ export async function fetchBusinessProfile(business_id: string, user_id: string,
 
 export async function getLeadIdFromRun(run_id: string, env: Env): Promise<string> {
   try {
+    const supabaseUrl = await getSupabaseUrl(env);
+    const headers = await createHeaders(env);
+    
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/runs?select=lead_id&run_id=eq.${run_id}`,
-      { headers: createHeaders(env) }
+      `${supabaseUrl}/rest/v1/runs?select=lead_id&run_id=eq.${run_id}`,
+      { headers }
     );
 
     if (!response.ok) {
