@@ -2,24 +2,38 @@
 // ENVIRONMENT INTERFACE (UPDATED)
 // ===============================================================================
 export interface Env {
-  // AWS Credentials (stored in Cloudflare)
+  // AWS Credentials (stored in Cloudflare Worker secrets ONLY)
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   AWS_REGION: string;
   AWS_ACCOUNT_ID: string;
   SECRETS_PREFIX: string;
   
-  // Admin (stored in Cloudflare)
+  // Admin token (stored in Cloudflare Worker secrets ONLY)
   ADMIN_TOKEN: string;
   
-  // Supabase (stored in Cloudflare)
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE: string;
-  SUPABASE_ANON_KEY: string;
+  // App environment (stored in Cloudflare Worker secrets ONLY)
+  APP_ENV: string;
   
-  // App Config (stored in Cloudflare)
-  FRONTEND_URL: string;
-  APP_ENV?: string;
+  // Cloudflare bindings
+  OSLIRA_KV: KVNamespace;
+  R2_CACHE_BUCKET: R2Bucket;
+  
+  // NOTE: ALL API keys and secrets below are retrieved from AWS Secrets Manager at runtime
+  // They are NOT environment variables and should NEVER be accessed via env.KEY_NAME
+  // Instead, use: await getApiKey('KEY_NAME', env, env.APP_ENV)
+  
+  // AWS-managed keys (retrieve via enhanced-config-manager):
+  // - SUPABASE_URL
+  // - SUPABASE_SERVICE_ROLE  
+  // - SUPABASE_ANON_KEY
+  // - FRONTEND_URL
+  // - OPENAI_API_KEY
+  // - CLAUDE_API_KEY
+  // - APIFY_API_TOKEN
+  // - STRIPE_SECRET_KEY
+  // - STRIPE_WEBHOOK_SECRET
+  // - STRIPE_PUBLISHABLE_KEY
   
   // Note: These are retrieved from AWS, not environment variables:
   // OPENAI_API_KEY, CLAUDE_API_KEY, APIFY_API_TOKEN, 
