@@ -219,8 +219,8 @@ static async renderDashboardUI(container) {
             const maxAttempts = timeout / 100;
             
             const checkAuth = () => {
-                const osliraApp = window.OsliraApp;
-                const user = osliraApp?.user;
+                const osliraAuth = window.osliraAuth;
+                const user = osliraAuth?.user;
                 const OsliraAuth = window.OsliraAuth;
                 
                 if (user && OsliraAuth?.supabase) {
