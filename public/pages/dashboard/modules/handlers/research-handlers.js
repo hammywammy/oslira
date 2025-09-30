@@ -76,10 +76,10 @@ class ResearchHandlers {
             console.log('🔐 [ResearchHandlers] Getting Supabase session...');
             
             let supabaseClient;
-            if (window.SimpleAuth?.supabase) {
-                supabaseClient = window.SimpleAuth.supabase();
+            if (window.OsliraAuth?.supabase) {
+                supabaseClient = window.OsliraAuth.supabase();
             } else {
-                console.error('❌ [ResearchHandlers] SimpleAuth not available');
+                console.error('❌ [ResearchHandlers] OsliraAuth not available');
                 return;
             }
 
