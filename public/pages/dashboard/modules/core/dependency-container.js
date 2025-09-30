@@ -416,11 +416,11 @@ function createDashboardContainer() {
     container.registerSingleton('eventBus', new DashboardEventBus());
     container.registerSingleton('stateManager', new DashboardStateManager(container.get('eventBus')));
     
-    container.registerSingleton('osliraApp', window.OsliraApp);
+    container.registerSingleton('osliraAuth', window.osliraAuth);
     
     // Register API wrapper if available
-    if (window.OsliraApp?.api) {
-        container.registerSingleton('api', window.OsliraApp.api);
+    if (window.osliraAuth?.api) {
+        container.registerSingleton('api', window.osliraAuth.api);
     }
     
     return container;
