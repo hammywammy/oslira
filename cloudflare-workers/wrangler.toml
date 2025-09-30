@@ -1,3 +1,4 @@
+# Zero secrets, zero config - just infrastructure bindings
 name = "ai-outreach-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
@@ -5,9 +6,6 @@ compatibility_date = "2025-08-01"
 routes = [
   { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
 ]
-
-[vars]
-APP_ENV = "production"
 
 [[kv_namespaces]]
 binding = "OSLIRA_KV"
@@ -17,14 +15,13 @@ id = "dd86f413c4374811ac253bb9a6567182"
 binding = "R2_CACHE_BUCKET"
 bucket_name = "oslira-preprocessor-cache"
 
+# Staging environment
 [env.staging]
 name = "oslira-api-stg"
+
 routes = [
   { pattern = "api-staging.oslira.com/*", zone_name = "oslira.com" }
 ]
-
-[env.staging.vars]
-APP_ENV = "staging"
 
 [[env.staging.kv_namespaces]]
 binding = "OSLIRA_KV"
