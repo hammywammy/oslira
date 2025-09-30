@@ -145,8 +145,8 @@ class ApiError extends Error {
     }
 }
 
-// Export class for instantiation, not instance
-window.OsliraApiClient = OsliraApiClient;
+// Export to window for global access
+window.OsliraApiClient = window.OsliraAPI;
 window.ApiError = ApiError;
 
 // Debug helper for development
