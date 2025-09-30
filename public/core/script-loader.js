@@ -1,5 +1,5 @@
 // =============================================================================
-// SCRIPT LOADER - CENTRALIZED DEPENDENCY MANAGEMENT
+// SCRIPT LOADER - CENTRALIZED DEPENDENCY MANAGEMENT WITH ASYNC CONFIG SUPPORT
 // =============================================================================
 
 // Prevent multiple declarations
@@ -14,86 +14,65 @@ class ScriptLoader {
         this.loadingPromises = new Map();
         
         // Core script loading order (must load in sequence)
-this.coreScripts = [
+        this.coreScripts = [
             'env-manager',
-            'timing-manager',  // Add this
+            'timing-manager',
             'supabase',
             'config-manager', 
             'auth-manager',
             'simple-app'
         ];
+        
         // Page-specific script configurations
         this.pageConfigs = {
-'dashboard': {
-    scripts: [
-        // Core infrastructure (load first)
-        '/core/sidebar/sidebar-manager.js',
-        
-        // Dashboard core systems (must load in order)
-        '/pages/dashboard/modules/core/DashboardCore.js',
-        '/pages/dashboard/modules/core/DashboardErrorSystem.js',
-        '/pages/dashboard/modules/core/DashboardEventSystem.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js',
-        
-        // Modal system (CRITICAL: Must load before analysis-functions)
-        '/pages/dashboard/modules/modals/components/tab-system.js',           // ADD THIS LINE
-        '/pages/dashboard/modules/modals/components/modal-components.js',
-        '/pages/dashboard/modules/modals/configs/analysis-configs.js', 
-        '/pages/dashboard/modules/modals/modal-builder.js',
-        
-        // Analysis system (depends on modal system)
-        '/pages/dashboard/modules/analysis/analysis-functions.js',
-        '/pages/dashboard/modules/analysis/analysis-modal.js',
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        
-        // Business logic modules
-        '/pages/dashboard/modules/bulk/bulk-upload.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        
-        // Event handlers
-        '/pages/dashboard/modules/handlers/lead-analysis-handlers.js',
-        '/pages/dashboard/modules/handlers/research-handlers.js',
-        
-        // Lead management
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        
-        '/pages/dashboard/modules/modals/research-modal.js',
-        '/pages/dashboard/modules/modals/bulk-modal.js',
-        '/pages/dashboard/modules/ui/stats-cards.js',
-        
-        // Real-time systems
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        
-        // Statistics and calculations
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        
-        // UI components
-        '/pages/dashboard/modules/ui/dashboard-header.js',
-        '/pages/dashboard/modules/ui/dashboard-styles.js',
-        '/pages/dashboard/modules/ui/insights-panel.js',
-        '/pages/dashboard/modules/ui/leads-table.js',
-        '/pages/dashboard/modules/ui/modal-manager.js',
-        
-        // Main dashboard application (must load last)
-        '/pages/dashboard/dashboard.js'
-    ],
+            'dashboard': {
+                scripts: [
+                    '/core/sidebar/sidebar-manager.js',
+                    '/pages/dashboard/modules/core/DashboardCore.js',
+                    '/pages/dashboard/modules/core/DashboardErrorSystem.js',
+                    '/pages/dashboard/modules/core/DashboardEventSystem.js',
+                    '/pages/dashboard/modules/core/dashboard-app.js',
+                    '/pages/dashboard/modules/core/dependency-container.js',
+                    '/pages/dashboard/modules/core/event-bus.js',
+                    '/pages/dashboard/modules/core/state-manager.js',
+                    '/pages/dashboard/modules/modals/components/tab-system.js',
+                    '/pages/dashboard/modules/modals/components/modal-components.js',
+                    '/pages/dashboard/modules/modals/configs/analysis-configs.js', 
+                    '/pages/dashboard/modules/modals/modal-builder.js',
+                    '/pages/dashboard/modules/analysis/analysis-functions.js',
+                    '/pages/dashboard/modules/analysis/analysis-modal.js',
+                    '/pages/dashboard/modules/analysis/analysis-queue.js',
+                    '/pages/dashboard/modules/bulk/bulk-upload.js',
+                    '/pages/dashboard/modules/business/business-manager.js',
+                    '/pages/dashboard/modules/handlers/lead-analysis-handlers.js',
+                    '/pages/dashboard/modules/handlers/research-handlers.js',
+                    '/pages/dashboard/modules/leads/lead-manager.js',
+                    '/pages/dashboard/modules/leads/lead-renderer.js',
+                    '/pages/dashboard/modules/modals/research-modal.js',
+                    '/pages/dashboard/modules/modals/bulk-modal.js',
+                    '/pages/dashboard/modules/ui/stats-cards.js',
+                    '/pages/dashboard/modules/realtime/realtime-manager.js',
+                    '/pages/dashboard/modules/stats/stats-calculator.js',
+                    '/pages/dashboard/modules/ui/dashboard-header.js',
+                    '/pages/dashboard/modules/ui/dashboard-styles.js',
+                    '/pages/dashboard/modules/ui/insights-panel.js',
+                    '/pages/dashboard/modules/ui/leads-table.js',
+                    '/pages/dashboard/modules/ui/modal-manager.js',
+                    '/pages/dashboard/dashboard.js'
+                ],
                 requiresAuth: true,
                 enableTailwind: true
             },
             
-home: {
-  scripts: [
-    '/pages/home/homeHandlers.js',  // Load handlers FIRST
-    '/pages/home/home.js',          // Then UI setup
-    '/core/footer/footer-manager.js'
-  ],
-  requiresAuth: false,
-  enableTailwind: true
-},
+            'home': {
+                scripts: [
+                    '/pages/home/homeHandlers.js',
+                    '/pages/home/home.js',
+                    '/core/footer/footer-manager.js'
+                ],
+                requiresAuth: false,
+                enableTailwind: true
+            },
             
             'onboarding': {
                 scripts: [
@@ -137,15 +116,21 @@ home: {
                 enableTailwind: true
             },
             
-'subscription': {
-    scripts: [
-        '/core/sidebar/sidebar-manager.js',  // ← ADD THIS FIRST, LIKE DASHBOARD
-        '/core/api-client.js',
-        '/pages/subscription/subscription.js'
-    ],
-    requiresAuth: true,
-    enableTailwind: true
-},
+            'subscription': {
+                scripts: [
+                    '/core/sidebar/sidebar-manager.js',
+                    '/core/api-client.js',
+                    '/pages/subscription/subscription.js'
+                ],
+                requiresAuth: true,
+                enableTailwind: true
+            },
+            
+            'admin': {
+                scripts: ['/pages/admin/admin.js'],
+                requiresAuth: true,
+                enableTailwind: true
+            },
             
             'about': {
                 scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
@@ -207,6 +192,8 @@ home: {
                 enableTailwind: true
             }
         };
+        
+        console.log('📦 [ScriptLoader] Initialized');
     }
     
     // =============================================================================
@@ -228,7 +215,7 @@ home: {
             
             console.log('✅ [ScriptLoader] Initialization complete');
             
-            // Ensure event dispatches after a minimal delay to allow all scripts to settle
+            // Dispatch loaded event
             setTimeout(() => {
                 const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
                     detail: {
@@ -248,7 +235,7 @@ home: {
     }
     
     // =============================================================================
-    // CORE SCRIPT LOADING
+    // CORE SCRIPTS LOADING
     // =============================================================================
     
     async loadCoreScripts() {
@@ -257,7 +244,6 @@ home: {
         for (const scriptName of this.coreScripts) {
             let scriptPath;
             
-            // Handle external CDN scripts
             if (scriptName === 'supabase') {
                 scriptPath = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
             } else {
@@ -267,7 +253,6 @@ home: {
             try {
                 await this.loadScript(scriptName, scriptPath);
                 
-                // Verify the script exposed its global object
                 const globalName = this.getGlobalName(scriptName);
                 if (globalName && !window[globalName]) {
                     throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
@@ -275,7 +260,6 @@ home: {
                     throw new Error('Supabase CDN failed to expose createClient function');
                 }
                 
-                // Give each core script time to initialize
                 await this.wait(100);
                 
             } catch (error) {
@@ -288,20 +272,20 @@ home: {
     getGlobalName(scriptName) {
         const globalMap = {
             'env-manager': 'OsliraEnv',
-            'supabase': null, // Supabase CDN doesn't expose a simple global - will check differently
+            'timing-manager': 'OsliraTimingManager',
+            'supabase': null,
             'config-manager': 'OsliraConfig', 
-            'auth-manager': 'OsliraAuth'
+            'auth-manager': 'OsliraAuth',
+            'simple-app': 'OsliraSimpleApp'
         };
         return globalMap[scriptName];
     }
     
     // =============================================================================
-    // PAGE SCRIPT LOADING
+    // PAGE SCRIPT LOADING WITH CONFIG WAIT
     // =============================================================================
     
-async loadPageScripts(pageName) {
-        console.log(`📄 [ScriptLoader] Loading scripts for page: ${pageName}`);
-        
+    async loadPageScripts(pageName) {
         const pageConfig = this.pageConfigs[pageName];
         if (!pageConfig) {
             console.warn(`⚠️ [ScriptLoader] No configuration found for page: ${pageName}`);
@@ -310,12 +294,30 @@ async loadPageScripts(pageName) {
         
         console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
         
-// Load timing manager first for centralized control
-await this.loadScript('timing-manager', '/core/timing-manager.js');
-        
-        // Load sidebar for authenticated pages
-        if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
-            await this.loadScript('sidebar-manager', '/core/sidebar/sidebar-manager.js');
+        // CRITICAL: Wait for async config to load before loading page scripts
+        console.log('⏳ [ScriptLoader] Waiting for config to load...');
+        try {
+            await window.OsliraEnv.ready();
+            console.log('✅ [ScriptLoader] Config ready, proceeding with page scripts');
+        } catch (error) {
+            console.error('❌ [ScriptLoader] Config loading failed:', error);
+            
+            // Show error to user
+            const errorOverlay = document.getElementById('oslira-config-loading');
+            if (errorOverlay) {
+                errorOverlay.innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="color: #ef4444; font-size: 18px; margin-bottom: 10px;">⚠️ Configuration Error</div>
+                        <div style="color: #6b7280;">Failed to load application configuration.</div>
+                        <div style="color: #6b7280; font-size: 14px; margin-top: 10px;">Please refresh the page or contact support.</div>
+                        <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            Reload Page
+                        </button>
+                    </div>
+                `;
+            }
+            
+            throw error;
         }
         
         // Load stylesheets for this page FIRST
@@ -335,7 +337,7 @@ await this.loadScript('timing-manager', '/core/timing-manager.js');
             }
         }
         
-// Load page scripts sequentially for dependency management
+        // Load page scripts sequentially for dependency management
         try {
             for (const scriptPath of pageConfig.scripts) {
                 const scriptName = this.extractScriptName(scriptPath);
@@ -347,54 +349,47 @@ await this.loadScript('timing-manager', '/core/timing-manager.js');
             throw error;
         }
         
-// CRITICAL: Initialize API client after all scripts are loaded
-if (pageConfig.scripts.includes('/core/api-client.js')) {
-    await this.initializeApiClient();
-}
+        // CRITICAL: Initialize API client after all scripts are loaded
+        if (pageConfig.scripts.includes('/core/api-client.js')) {
+            await this.initializeApiClient();
+        }
     }
     
     // =============================================================================
     // API CLIENT INITIALIZATION  
     // =============================================================================
     
-async initializeApiClient() {
-    // Ensure dependencies are available
-    if (!window.OsliraConfig || !window.OsliraAuth) {
-        console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
-        return;
-    }
-    
-    try {
-        // Wait for config to be fully loaded
-        const configObj = await window.OsliraConfig.getConfig();
+    async initializeApiClient() {
+        console.log('🔧 [ScriptLoader] Initializing API client...');
         
-        console.log('🔍 [ScriptLoader] Raw config object:', {
-            configObj: configObj,
-            keys: Object.keys(configObj),
-            workerUrl: configObj.workerUrl,
-            WORKER_URL: configObj.WORKER_URL
-        });
-        
-        console.log('🔍 [ScriptLoader] Environment details:', {
-            envWorkerUrl: window.OsliraEnv?.WORKER_URL,
-            envConfig: window.OsliraEnv
-        });
-        
-        // Create API client instance with proper dependencies
-        window.OsliraApiClient = new window.OsliraApiClient(
-            configObj, 
-            window.OsliraAuth
-        );
-        
-        console.log('✅ [ScriptLoader] API client initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ [ScriptLoader] API client initialization failed:', error);
-    }
-}
-    
-    extractScriptName(scriptPath) {
-        return scriptPath.split('/').pop().replace('.js', '');
+        try {
+            // Wait for config to be ready (should already be ready, but double-check)
+            await window.OsliraEnv.ready();
+            
+            if (typeof window.OsliraApiClient === 'undefined') {
+                throw new Error('OsliraApiClient not loaded');
+            }
+            
+            // Initialize with config from env manager
+            const config = {
+                workerUrl: window.OsliraEnv.WORKER_URL,
+                supabaseUrl: window.OsliraEnv.SUPABASE_URL,
+                supabaseAnonKey: window.OsliraEnv.SUPABASE_ANON_KEY
+            };
+            
+            console.log('🔧 [ScriptLoader] API Client config:', {
+                workerUrl: config.workerUrl,
+                hasSupabaseUrl: !!config.supabaseUrl,
+                hasAnonKey: !!config.supabaseAnonKey
+            });
+            
+            window.OsliraAPI = new window.OsliraApiClient(config);
+            console.log('✅ [ScriptLoader] API client initialized');
+            
+        } catch (error) {
+            console.error('❌ [ScriptLoader] Failed to initialize API client:', error);
+            throw error;
+        }
     }
     
     // =============================================================================
@@ -402,19 +397,16 @@ async initializeApiClient() {
     // =============================================================================
     
     async loadScript(name, src) {
-        // Check if already loaded
         if (this.loadedScripts.has(name)) {
             return;
         }
         
-        // Check if already loading
         if (this.loadingPromises.has(name)) {
             return this.loadingPromises.get(name);
         }
         
-        // Check if previously failed
         if (this.failedScripts.has(name)) {
-            console.warn(`⚠️  [ScriptLoader] Skipping previously failed script: ${name}`);
+            console.warn(`⚠️ [ScriptLoader] Skipping previously failed script: ${name}`);
             return;
         }
         
@@ -447,7 +439,6 @@ async initializeApiClient() {
     }
     
     async loadStylesheet(name, href) {
-        // Check if already loaded
         if (this.loadedScripts.has(name)) {
             return;
         }
@@ -476,6 +467,10 @@ async initializeApiClient() {
         return promise;
     }
     
+    extractScriptName(scriptPath) {
+        return scriptPath.split('/').pop().replace('.js', '').replace('.css', '');
+    }
+    
     // =============================================================================
     // ERROR HANDLING
     // =============================================================================
@@ -483,7 +478,6 @@ async initializeApiClient() {
     handleInitializationError(error) {
         console.error('🚨 [ScriptLoader] Critical initialization error:', error);
         
-        // Show user-friendly error message
         this.showErrorMessage(
             'Application Loading Error',
             'There was a problem loading the application. Please refresh the page to try again.'
@@ -513,10 +507,8 @@ async initializeApiClient() {
     wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
-
     
-    
-// =============================================================================
+    // =============================================================================
     // PUBLIC API METHODS
     // =============================================================================
     
@@ -533,18 +525,15 @@ async initializeApiClient() {
     }
     
     async reloadScript(name) {
-        // Remove from loaded and failed sets
         this.loadedScripts.delete(name);
         this.failedScripts.delete(name);
         
-        // Find the script path from core scripts or page configs
         let scriptPath;
         if (this.coreScripts.includes(name)) {
             scriptPath = name === 'supabase' ? 
                 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2' : 
                 `/core/${name}.js`;
         } else {
-            // Search in page configs for the script path
             for (const pageConfig of Object.values(this.pageConfigs)) {
                 const found = pageConfig.scripts?.find(path => 
                     this.extractScriptName(path) === name
@@ -568,10 +557,8 @@ async initializeApiClient() {
 // INITIALIZATION
 // =============================================================================
 
-// Create global instance
 window.ScriptLoader = new ScriptLoader();
 
-// Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
         try {
@@ -581,7 +568,6 @@ if (document.readyState === 'loading') {
         }
     });
 } else {
-    // DOM already loaded
     setTimeout(async () => {
         try {
             await window.ScriptLoader.initialize();
@@ -591,7 +577,6 @@ if (document.readyState === 'loading') {
     }, 0);
 }
 
-// Debug utilities for development
 if (window.location.hostname === 'localhost' || window.location.hostname.includes('staging')) {
     window.debugScriptLoader = {
         getLoaded: () => window.ScriptLoader.getLoadedScripts(),
@@ -601,4 +586,6 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
     };
 }
 
-} // End of ScriptLoader class declaration check
+} // End of duplicate check
+
+console.log('📦 [ScriptLoader] Module loaded and ready');
