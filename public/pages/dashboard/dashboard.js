@@ -124,7 +124,7 @@ console.log('✅ [Dashboard] OsliraApp compatibility layer created');
         }
         
         try {
-            await window.SidebarManager.init();
+            await window.sidebarManager.render('#sidebar-container');
             console.log('✅ [Dashboard] Sidebar initialized successfully');
         } catch (error) {
             console.error('❌ [Dashboard] Sidebar initialization failed:', error);
