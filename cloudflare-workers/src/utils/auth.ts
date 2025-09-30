@@ -65,17 +65,17 @@ async function verifyJWTSignature(token: string, env: Env): Promise<boolean> {
 
 export async function extractUserFromJWT(token: string, env: Env, requestId: string = 'default'): Promise<AuthResult> {
   try {
+    const { getApiKey } = await import('../services/enhanced-config-manager.js');
     const supabaseUrl = await getApiKey('SUPABASE_URL', env);
     const supabaseKey = await getApiKey('SUPABASE_ANON_KEY', env);
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Verify token using Supabase's built-in verification
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error || !user) {
       logger('warn', 'Invalid JWT token', { error: error?.message, requestId });
-      return { isValid: false, error: 'Invalid or expired token' };
+      return { isValid: false, error: error?.message || 'Invalid token' };
     }
     
     logger('info', 'JWT token validated', { userId: user.id, email: user.email, requestId });
