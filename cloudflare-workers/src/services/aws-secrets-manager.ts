@@ -76,12 +76,14 @@ export class AWSSecretsManager {
       // Try to parse as structured JSON first
       try {
         const secretValue: SecretValue = JSON.parse(data.SecretString);
-        logger('info', 'Retrieved structured secret from AWS', { 
-          secretPath,
-          version: secretValue.version,
-          rotatedBy: secretValue.rotatedBy
-        });
-        return secretValue.apiKey;
+logger('info', 'Retrieved structured secret from AWS', { 
+  secretPath,
+  version: secretValue.version,
+  rotatedBy: secretValue.rotatedBy,
+  apiKeyLength: secretValue.apiKey.length,
+  apiKeyPreview: secretValue.apiKey.substring(0, 15) + '...' + secretValue.apiKey.substring(secretValue.apiKey.length - 6)
+});
+return secretValue.apiKey;
       } catch {
         // If not structured, return as plain string
         logger('info', 'Retrieved plain text secret from AWS', { secretPath });
