@@ -394,8 +394,8 @@ async function authenticateRequest(c: Context<{ Bindings: Env }>, requestId: str
       return { success: false, error: 'No valid authorization header' };
     }
     
-    const token = authHeader.substring(7);
-    const userResult = await extractUserFromJWT(token, c.env);
+const token = authHeader.substring(7);
+const userResult = await extractUserFromJWT(token, c.env, requestId);
     
     if (!userResult.isValid) {
       return { success: false, error: userResult.error };
