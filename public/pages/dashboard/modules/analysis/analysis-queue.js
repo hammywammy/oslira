@@ -14,7 +14,7 @@ constructor(container) {
     
     // Validate Supabase client during construction
     if (!this.supabase) {
-        console.warn('⚠️ [EnhancedAnalysisQueue] No Supabase client from container, will use SimpleAuth fallback');
+        console.warn('⚠️ [EnhancedAnalysisQueue] No Supabase client from container, will use OsliraAuth fallback');
     }
         
         // Queue configuration
@@ -919,16 +919,16 @@ async startSingleAnalysis(username, analysisType, businessId, requestData) {
         throw new Error('Database connection not configured');
     }
 
-    // 2. GET FRESH SUPABASE CLIENT FROM SIMPLEAUTH IF NEEDED  
+    // 2. GET FRESH SUPABASE CLIENT FROM OsliraAuth IF NEEDED  
     let supabaseClient = this.supabase;
     
-    // If our injected client is missing URL, get it from SimpleAuth
-    if (!supabaseClient.supabaseUrl && window.SimpleAuth?.supabase) {
-        console.log('🔄 [EnhancedAnalysisQueue] Getting fresh Supabase client from SimpleAuth');
-        supabaseClient = window.SimpleAuth.supabase();
+    // If our injected client is missing URL, get it from OsliraAuth
+    if (!supabaseClient.supabaseUrl && window.OsliraAuth?.supabase) {
+        console.log('🔄 [EnhancedAnalysisQueue] Getting fresh Supabase client from OsliraAuth');
+        supabaseClient = window.OsliraAuth.supabase;
         
         if (!supabaseClient) {
-            throw new Error('Unable to get Supabase client from SimpleAuth');
+            throw new Error('Unable to get Supabase client from OsliraAuth');
         }
     }
     
@@ -1080,11 +1080,11 @@ async callAnalysisAPI(requestData) {
         
         // 2. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
         let supabaseClient;
-        if (window.SimpleAuth?.supabase) {
-            supabaseClient = window.SimpleAuth.supabase();
-            console.log('✅ [EnhancedAnalysisQueue] Using SimpleAuth client');
+        if (window.OsliraAuth?.supabase) {
+            supabaseClient = window.OsliraAuth.supabase();
+            console.log('✅ [EnhancedAnalysisQueue] Using OsliraAuth client');
         } else {
-            throw new Error('SimpleAuth not available - cannot get session');
+            throw new Error('OsliraAuth not available - cannot get session');
         }
         
         // 3. GET SESSION
