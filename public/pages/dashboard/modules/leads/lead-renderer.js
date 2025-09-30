@@ -10,7 +10,7 @@ class LeadRenderer {
         this.container = container;
         this.eventBus = container.get('eventBus');
         this.stateManager = container.get('stateManager');
-        this.osliraApp = container.get('osliraApp');
+        this.osliraAuth = container.get('osliraAuth');
         
         // Cache for rendered elements
         this.renderCache = new Map();
