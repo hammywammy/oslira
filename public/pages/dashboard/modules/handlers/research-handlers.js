@@ -77,7 +77,7 @@ class ResearchHandlers {
             
             let supabaseClient;
             if (window.OsliraAuth?.supabase) {
-                supabaseClient = window.OsliraAuth.supabase();
+                supabaseClient = window.OsliraAuth.supabase;
             } else {
                 console.error('❌ [ResearchHandlers] OsliraAuth not available');
                 return;
