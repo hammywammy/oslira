@@ -7,16 +7,16 @@
  * Handles all analysis modal, form processing, and build analysis functionality
  */
 class AnalysisFunctions {
-    constructor(container) {
-        this.container = container;
-        this.eventBus = container.get('eventBus');
-        this.stateManager = container.get('stateManager');
-        this.osliraApp = container.get('osliraApp');
-        this.isProcessing = false;
-        this.bulkUsernames = [];
-        
-        console.log('🔍 [AnalysisFunctions] Initialized');
-    }
+constructor(container) {
+    this.container = container;
+    this.eventBus = container.get('eventBus');
+    this.stateManager = container.get('stateManager');
+    this.osliraAuth = container.get('osliraAuth');
+    this.isProcessing = false;
+    this.bulkUsernames = [];
+    
+    console.log('🔍 [AnalysisFunctions] Initialized');
+}
 
     init() {
     console.log('🔧 [AnalysisFunctions] Initializing...');
@@ -369,7 +369,7 @@ setupGlobalMethods() {
             
         } catch (error) {
             console.error('❌ [AnalysisFunctions] Failed to open analysis modal:', error);
-            this.osliraApp?.showMessage('Failed to open analysis modal. Please try again.', 'error');
+            this.osliraAuth?.showMessage('Failed to open analysis modal. Please try again.', 'error');
         }
     }
 
@@ -478,7 +478,7 @@ updateAnalysisSubmitButton(analysisType) {
                 businessId
             });
             
-            this.osliraApp?.showMessage(
+            this.osliraAuth?.showMessage(
                 `Analysis started for @${cleanUsername}`,
                 'success'
             );
@@ -487,7 +487,7 @@ updateAnalysisSubmitButton(analysisType) {
             
         } catch (error) {
             console.error('❌ [AnalysisFunctions] Analysis form processing failed:', error);
-            this.osliraApp?.showMessage(
+            this.osliraAuth?.showMessage(
                 `Analysis failed: ${error.message}`,
                 'error'
             );
@@ -559,7 +559,7 @@ updateAnalysisSubmitButton(analysisType) {
             
         } catch (error) {
             console.error('❌ [AnalysisFunctions] File processing failed:', error);
-            this.osliraApp?.showMessage(`File processing failed: ${error.message}`, 'error');
+            this.osliraAuth?.showMessage(`File processing failed: ${error.message}`, 'error');
             
             // Reset file input
             event.target.value = '';
@@ -631,7 +631,7 @@ updateAnalysisSubmitButton(analysisType) {
                 businessId
             });
             
-            this.osliraApp?.showMessage(
+            this.osliraAuth?.showMessage(
                 `Bulk analysis started for ${this.bulkUsernames.length} profiles`,
                 'success'
             );
@@ -640,7 +640,7 @@ updateAnalysisSubmitButton(analysisType) {
             
         } catch (error) {
             console.error('❌ [AnalysisFunctions] Bulk upload failed:', error);
-            this.osliraApp?.showMessage(
+            this.osliraAuth?.showMessage(
                 `Bulk upload failed: ${error.message}`,
                 'error'
             );
@@ -756,12 +756,12 @@ async buildAnalysisModal(leadId) {
         const allowedTypes = ['text/csv', 'text/plain', 'application/vnd.ms-excel'];
         
         if (file.size > maxSize) {
-            this.osliraApp?.showMessage('File too large. Maximum size is 5MB.', 'error');
+            this.osliraAuth?.showMessage('File too large. Maximum size is 5MB.', 'error');
             return false;
         }
         
         if (!allowedTypes.includes(file.type) && !file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
-            this.osliraApp?.showMessage('Please upload a CSV or TXT file.', 'error');
+            this.osliraAuth?.showMessage('Please upload a CSV or TXT file.', 'error');
             return false;
         }
         
@@ -835,7 +835,7 @@ async buildAnalysisModal(leadId) {
 
     checkBulkCredits() {
         const creditCost = this.calculateBulkCreditCost();
-        const availableCredits = this.osliraApp?.credits || 0;
+        const availableCredits = this.osliraAuth?.credits || 0;
         return availableCredits >= creditCost;
     }
     
