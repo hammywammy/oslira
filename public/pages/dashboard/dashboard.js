@@ -1,5 +1,5 @@
 // =============================================================================
-// DASHBOARD.JS - Main Dashboard Controller with Modular Sidebar
+// DASHBOARD.JS - Main Dashboard Controller with Config Wait
 // =============================================================================
 
 class DashboardInitializer {
@@ -13,6 +13,11 @@ class DashboardInitializer {
         
         try {
             console.log('🚀 [Dashboard] Starting initialization...');
+            
+            // CRITICAL: Wait for config to be loaded
+            console.log('⏳ [Dashboard] Waiting for config to be ready...');
+            await window.OsliraEnv.ready();
+            console.log('✅ [Dashboard] Config ready, proceeding with initialization');
             
             // Verify all required modules are loaded
             this.verifyModules();
@@ -38,126 +43,93 @@ class DashboardInitializer {
         }
     }
     
+    verifyModules() {
+        console.log('🔍 [Dashboard] Verifying required modules...');
+        
+        const requiredModules = [
+            'DashboardCore',
+            'DashboardApp',
+            'DashboardEventSystem',
+            'DashboardErrorSystem',
+            'DependencyContainer'
+        ];
+        
+        const missing = requiredModules.filter(module => !window[module]);
+        
+        if (missing.length > 0) {
+            throw new Error(`Missing required modules: ${missing.join(', ')}`);
+        }
+        
+        console.log('✅ [Dashboard] All required modules present');
+    }
+    
     async initializeApp() {
         console.log('📱 [Dashboard] Initializing dashboard app...');
         
         // Wait for OsliraApp to be available
         for (let i = 0; i < 50; i++) {
             if (window.OsliraApp?.user) {
-                console.log('👤 [Dashboard] OsliraApp available with user data');
+                console.log('👤 [Dashboard] OsliraApp available with user');
                 break;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         if (!window.OsliraApp?.user) {
-            throw new Error('OsliraApp not available or no user data');
+            throw new Error('OsliraApp not available or user not authenticated');
         }
         
-        // Use the global DashboardApp (loaded via script loader)
-        try {
-            if (!window.DashboardApp) {
-                throw new Error('DashboardApp not available on window object');
+        // Create and initialize the dashboard app
+        this.app = new DashboardApp();
+        await this.app.init();
+        
+        // CRITICAL: Expose container globally for TimingManager
+        window.dashboard = {
+            container: this.app.container,
+            app: this.app
+        };
+        
+        // Set global reference for onclick handlers
+        if (this.app && this.app.container) {
+            try {
+                window.analysisQueue = this.app.container.get('analysisQueue');
+                console.log('✅ [Dashboard] Global analysisQueue reference set');
+            } catch (error) {
+                console.warn('⚠️ [Dashboard] Failed to set global analysisQueue:', error.message);
             }
-            
-this.app = new DashboardApp();
-await this.app.init();
-
-// CRITICAL: Expose container globally for TimingManager
-window.dashboard = {
-    container: this.app.container,
-    app: this.app
-};
-            
-            // Set global reference for onclick handlers after successful initialization
-            if (this.app && this.app.container) {
-                try {
-                    window.analysisQueue = this.app.container.get('analysisQueue');
-                    console.log('✅ [Dashboard] Global analysisQueue reference set');
-                } catch (error) {
-                    console.warn('⚠️ [Dashboard] Failed to set global analysisQueue:', error.message);
-                }
-            }
-            
-            console.log('✅ [Dashboard] Dashboard app initialized');
-        } catch (error) {
-            console.warn('⚠️ [Dashboard] DashboardApp not available, continuing without it:', error.message);
-            // Create minimal app placeholder
-            this.app = {
-                container: null,
-                initialized: true
-            };
         }
+        
+        console.log('✅ [Dashboard] App initialized successfully');
     }
     
     async initializeSidebar() {
+        console.log('📐 [Dashboard] Initializing modular sidebar...');
+        
+        // Wait for SidebarManager to be available
+        if (!window.SidebarManager) {
+            console.warn('⚠️ [Dashboard] SidebarManager not available, skipping sidebar initialization');
+            return;
+        }
+        
         try {
-            console.log('📋 [Dashboard] Initializing modular sidebar...');
-            
-            // Wait for sidebarManager to be available
-            for (let i = 0; i < 50; i++) {
-                if (window.sidebarManager) {
-                    console.log('✅ [Dashboard] SidebarManager found');
-                    break;
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-            if (!window.sidebarManager) {
-                console.warn('⚠️ [Dashboard] SidebarManager not available after waiting, skipping sidebar');
-                return;
-            }
-            
-            // Render sidebar with correct selector
-            await window.sidebarManager.render('#sidebar-container');
-            
+            await window.SidebarManager.init();
             console.log('✅ [Dashboard] Sidebar initialized successfully');
-            
         } catch (error) {
             console.error('❌ [Dashboard] Sidebar initialization failed:', error);
-            // Don't throw - dashboard can work without sidebar
+            // Non-critical error, continue with dashboard initialization
         }
-    }
-    
-    verifyModules() {
-        const requiredModules = [
-            { name: 'OsliraApp', path: 'window.OsliraApp' },
-            { name: 'SimpleAuth', path: 'window.SimpleAuth' }
-        ];
-        
-        const optionalModules = [
-            { name: 'SidebarManager', path: 'window.SidebarManager' }
-        ];
-        
-        const missing = [];
-        
-        requiredModules.forEach(module => {
-            const obj = module.path.split('.').reduce((o, p) => o && o[p], window);
-            if (!obj) {
-                missing.push(module.name);
-            }
-        });
-        
-        if (missing.length > 0) {
-            throw new Error(`Required modules not loaded: ${missing.join(', ')}`);
-        }
-        
-        // Log optional modules
-        optionalModules.forEach(module => {
-            const obj = module.path.split('.').reduce((o, p) => o && o[p], window);
-            if (!obj) {
-                console.warn(`⚠️ [Dashboard] Optional module not available: ${module.name}`);
-            }
-        });
-        
-        console.log('✅ [Dashboard] Required modules verified');
     }
     
     setupGlobalCompatibility() {
+        console.log('🌐 [Dashboard] Setting up global compatibility...');
+        
         // Create comprehensive global dashboard interface
         window.dashboard = {
             // Core initialization
+            app: this.app,
+            container: this.app?.container,
             init: () => this.init(),
+            refresh: () => window.location.reload(),
             
             // Modal Management
             showAnalysisModal: (username = '') => {
@@ -172,7 +144,6 @@ window.dashboard = {
                     if (modal) {
                         modal.style.display = 'flex';
                         
-                        // Prefill username if provided
                         if (username) {
                             const usernameInput = document.getElementById('username');
                             const analysisType = document.getElementById('analysis-type');
@@ -184,8 +155,6 @@ window.dashboard = {
                         }
                         
                         console.log('✅ [Dashboard] Analysis modal opened via fallback');
-                    } else {
-                        console.error('❌ [Dashboard] Analysis modal element not found');
                     }
                 } catch (error) {
                     console.error('❌ [Dashboard] showAnalysisModal failed:', error);
@@ -199,7 +168,6 @@ window.dashboard = {
                         return this.app.showBulkModal();
                     }
                     
-                    // Fallback: direct modal opening
                     const modal = document.getElementById('bulkModal');
                     if (modal) {
                         modal.style.display = 'flex';
@@ -217,7 +185,6 @@ window.dashboard = {
                         return this.app.closeModal(modalId);
                     }
                     
-                    // Fallback: direct modal closing
                     const modal = document.getElementById(modalId);
                     if (modal) {
                         modal.style.display = 'none';
@@ -232,12 +199,10 @@ window.dashboard = {
             submitAnalysis: async () => {
                 console.log('🔍 [Dashboard] Global submitAnalysis called');
                 
-                const form = document.getElementById('analysisForm');
                 const submitBtn = document.getElementById('analysis-submit-btn');
                 const analysisType = document.getElementById('analysis-type')?.value;
                 const username = document.getElementById('username')?.value;
                 
-                // Validation
                 if (!analysisType) {
                     this.showAlert('Please select an analysis type', 'error');
                     return;
@@ -251,14 +216,12 @@ window.dashboard = {
                 let originalText = 'Start Analysis';
                 
                 try {
-                    // Update button state
                     if (submitBtn) {
                         originalText = submitBtn.textContent;
                         submitBtn.textContent = 'Processing...';
                         submitBtn.disabled = true;
                     }
                     
-                    // Get configuration
                     const config = await window.OsliraConfig.getConfig();
                     const session = window.SimpleAuth.getCurrentSession();
                     
@@ -266,7 +229,6 @@ window.dashboard = {
                         throw new Error('Authentication required');
                     }
                     
-                    // Submit analysis
                     const response = await fetch(`${config.workerUrl}/analyze/single`, {
                         method: 'POST',
                         headers: {
@@ -283,7 +245,6 @@ window.dashboard = {
                         this.showAlert('Analysis started! Results will appear in your dashboard.', 'success');
                         this.closeModal('analysisModal');
                         
-                        // Refresh dashboard if possible
                         if (this.app?.refreshLeads) {
                             setTimeout(() => this.app.refreshLeads(), 2000);
                         }
@@ -296,7 +257,6 @@ window.dashboard = {
                     console.error('❌ [Dashboard] Analysis submission failed:', error);
                     this.showAlert(error.message || 'Analysis failed. Please try again.', 'error');
                 } finally {
-                    // Reset button state
                     if (submitBtn) {
                         submitBtn.textContent = originalText;
                         submitBtn.disabled = false;
@@ -385,7 +345,6 @@ window.dashboard = {
                             window.Alert.info(message);
                     }
                 } else {
-                    // Fallback to browser alert
                     alert(message);
                 }
             },
@@ -404,7 +363,32 @@ window.dashboard = {
                 }
             },
             
-            // Debug and Development
+            // Debug utilities
+            debug: () => {
+                console.group('🐛 [Dashboard] Debug Info');
+                console.log('Initialized:', this.initialized);
+                console.log('Has app:', !!this.app);
+                console.log('App initialized:', this.app?.initialized);
+                console.log('Container:', {
+                    exists: !!this.app?.container,
+                    moduleCount: this.app?.container ? this.app.container.list().length : 0
+                });
+                
+                if (this.app?.container) {
+                    console.log('Modules:', this.app.container.list());
+                    console.log('Container state:', {
+                        modalManager: !!this.app.container.get('modalManager'),
+                        businessManager: !!this.app.container.get('businessManager'),
+                        leadManager: !!this.app.container.get('leadManager')
+                    });
+                }
+                console.groupEnd();
+                
+                if (this.app?.debugDashboard) {
+                    return this.app.debugDashboard();
+                }
+            },
+            
             debugDashboard: () => {
                 console.log('🐛 [Dashboard] Debug info:', {
                     app: !!this.app,
@@ -445,30 +429,43 @@ window.dashboard = {
     handleInitializationError(error) {
         console.error('💥 [Dashboard] Critical initialization error:', error);
         
-        // Show user-friendly error message
         const errorContainer = document.createElement('div');
         errorContainer.className = 'dashboard-error';
+        errorContainer.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            text-align: center;
+            z-index: 10000;
+        `;
         errorContainer.innerHTML = `
             <div class="error-content">
-                <h2>⚠️ Dashboard Loading Error</h2>
-                <p>The dashboard failed to initialize properly.</p>
-                <p><strong>Error:</strong> ${error.message}</p>
-                <div class="error-actions">
-                    <button onclick="window.location.reload()" class="btn btn-primary">
+                <h2 style="color: #ef4444; font-size: 24px; margin-bottom: 16px;">⚠️ Dashboard Loading Error</h2>
+                <p style="color: #6b7280; margin-bottom: 12px;">The dashboard failed to initialize properly.</p>
+                <p style="color: #374151; font-size: 14px; margin-bottom: 24px;"><strong>Error:</strong> ${error.message}</p>
+                <div class="error-actions" style="display: flex; gap: 12px; justify-content: center;">
+                    <button onclick="window.location.reload()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
                         🔄 Reload Page
                     </button>
-                    <button onclick="window.location.href='/auth'" class="btn btn-secondary">
+                    <button onclick="window.location.href='/auth'" style="padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
                         🔐 Return to Login
                     </button>
                 </div>
             </div>
         `;
         
-        // Replace dashboard content with error message
         const dashboard = document.querySelector('.dashboard');
         if (dashboard) {
             dashboard.innerHTML = '';
             dashboard.appendChild(errorContainer);
+        } else {
+            document.body.appendChild(errorContainer);
         }
     }
 }
@@ -479,17 +476,15 @@ window.dashboard = {
 
 const dashboardInitializer = new DashboardInitializer();
 
-// Initialize immediately if DOM is ready, or when it becomes ready
 const startDashboard = async () => {
     try {
         console.log('📄 [Dashboard] Dashboard initializer ready');
         
-        // Initialization will be controlled by TimingManager
         window.addEventListener('oslira:timing:ready', () => {
             console.log('📄 [Dashboard] TimingManager ready, dashboard can proceed');
         });
         
-        // 2. Polling with shorter interval for faster response
+        // Polling with shorter interval for faster response
         console.log('📄 [Dashboard] Setting up dependency polling...');
         const pollForDependencies = setInterval(async () => {
             if (window.OsliraApp && window.SimpleAuth && !dashboardInitializer.initialized) {
@@ -497,9 +492,9 @@ const startDashboard = async () => {
                 clearInterval(pollForDependencies);
                 await dashboardInitializer.init();
             }
-        }, 100); // Check every 100ms instead of 500ms
+        }, 100);
         
-        // 3. Cleanup timeout after 10 seconds
+        // Cleanup timeout after 10 seconds
         setTimeout(() => {
             clearInterval(pollForDependencies);
             if (!dashboardInitializer.initialized) {
@@ -512,14 +507,11 @@ const startDashboard = async () => {
     }
 };
 
-// Start immediately if DOM is ready, otherwise wait for it
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startDashboard);
 } else {
-    // DOM already ready - start immediately
     startDashboard();
 }
 
-// Make dashboardInitializer available globally for debugging
 window.dashboardInitializer = dashboardInitializer;
-console.log('📊 Dashboard initializer ready');
+console.log('📄 [Dashboard] Module loaded');
