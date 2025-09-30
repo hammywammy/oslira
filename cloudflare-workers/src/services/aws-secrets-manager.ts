@@ -20,32 +20,45 @@ export class AWSSecretsManager {
   private region: string;
   private configured: boolean;
 
-constructor(env: Env) {
-  // Cloudflare Workers environment variables are accessed directly
-  this.accessKeyId = env.AWS_ACCESS_KEY_ID || '';
-  this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY || '';
-  this.region = env.AWS_REGION || 'us-east-1';
+  constructor(env: Env) {
+    this.accessKeyId = env.AWS_ACCESS_KEY_ID || '';
+    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY || '';
+    this.region = env.AWS_REGION || 'us-east-1';
 
-  if (!this.accessKeyId || !this.secretAccessKey) {
-    logger('error', 'AWS credentials not configured', {
-      hasAccessKey: !!this.accessKeyId,
-      hasSecretKey: !!this.secretAccessKey
-    });
-    // Don't throw - gracefully degrade to Supabase-only mode
-    this.configured = false;
-  } else {
-    this.configured = true;
+    if (!this.accessKeyId || !this.secretAccessKey) {
+      logger('error', 'AWS credentials not configured', {
+        hasAccessKey: !!this.accessKeyId,
+        hasSecretKey: !!this.secretAccessKey
+      });
+      this.configured = false;
+    } else {
+      this.configured = true;
+    }
   }
-}
 
-isConfigured(): boolean {
-  return this.configured;
-}
+  isConfigured(): boolean {
+    return this.configured;
+  }
 
-  async getSecret(secretName: string): Promise<string> {
+  /**
+   * Get secret from AWS Secrets Manager
+   * Supports both flat paths (Oslira/KEY) and environment-prefixed paths (Oslira/production/KEY)
+   * @param secretPath - Full secret path (e.g., "production/SUPABASE_URL" or "SUPABASE_URL")
+   */
+  async getSecret(secretPath: string): Promise<string> {
+    if (!this.configured) {
+      throw new Error('AWS Secrets Manager not configured');
+    }
+
     try {
+      // If path contains slash, it's already prefixed (e.g., "production/SUPABASE_URL")
+      // Otherwise it's a flat key (e.g., "OPENAI_API_KEY")
+      const fullPath = secretPath.includes('/') 
+        ? `Oslira/${secretPath}`
+        : `Oslira/${secretPath}`;
+
       const response = await this.makeAWSRequest('GetSecretValue', {
-        SecretId: `Oslira/${secretName}`,
+        SecretId: fullPath,
         VersionStage: 'AWSCURRENT'
       });
 
@@ -60,29 +73,48 @@ isConfigured(): boolean {
         throw new Error('Secret has no string value');
       }
 
-      const secretValue: SecretValue = JSON.parse(data.SecretString);
-      
-      logger('info', 'Retrieved secret from AWS Secrets Manager', { 
-        secretName,
-        version: secretValue.version,
-        rotatedBy: secretValue.rotatedBy
-      });
-
-      return secretValue.apiKey;
+      // Try to parse as structured JSON first
+      try {
+        const secretValue: SecretValue = JSON.parse(data.SecretString);
+        logger('info', 'Retrieved structured secret from AWS', { 
+          secretPath,
+          version: secretValue.version,
+          rotatedBy: secretValue.rotatedBy
+        });
+        return secretValue.apiKey;
+      } catch {
+        // If not structured, return as plain string
+        logger('info', 'Retrieved plain text secret from AWS', { secretPath });
+        return data.SecretString;
+      }
 
     } catch (error: any) {
       logger('error', 'Failed to retrieve secret from AWS', { 
-        secretName, 
+        secretPath, 
         error: error.message 
       });
-      throw new Error(`AWS Secrets retrieval failed: ${error.message}`);
+      throw new Error(`AWS Secrets retrieval failed for ${secretPath}: ${error.message}`);
     }
   }
 
-  async putSecret(secretName: string, secretValue: string, rotatedBy: string = 'manual'): Promise<void> {
+  /**
+   * Update existing secret value
+   * @param secretPath - Full secret path (e.g., "production/SUPABASE_URL")
+   * @param secretValue - New secret value
+   * @param rotatedBy - Who/what rotated the secret
+   */
+  async putSecret(secretPath: string, secretValue: string, rotatedBy: string = 'manual'): Promise<void> {
+    if (!this.configured) {
+      throw new Error('AWS Secrets Manager not configured');
+    }
+
     try {
+      const fullPath = secretPath.includes('/') 
+        ? `Oslira/${secretPath}`
+        : `Oslira/${secretPath}`;
+
       const payload = {
-        SecretId: `Oslira/${secretName}`,
+        SecretId: fullPath,
         SecretString: JSON.stringify({
           apiKey: secretValue,
           createdAt: new Date().toISOString(),
@@ -99,23 +131,37 @@ isConfigured(): boolean {
       }
 
       logger('info', 'Successfully updated secret in AWS', { 
-        secretName, 
+        secretPath, 
         rotatedBy 
       });
 
     } catch (error: any) {
       logger('error', 'Failed to store secret in AWS', { 
-        secretName, 
+        secretPath, 
         error: error.message 
       });
-      throw new Error(`AWS Secrets storage failed: ${error.message}`);
+      throw new Error(`AWS Secrets storage failed for ${secretPath}: ${error.message}`);
     }
   }
 
-  async createSecret(secretName: string, secretValue: string, description: string): Promise<void> {
+  /**
+   * Create a new secret
+   * @param secretPath - Full secret path (e.g., "production/SUPABASE_URL")
+   * @param secretValue - Secret value
+   * @param description - Human-readable description
+   */
+  async createSecret(secretPath: string, secretValue: string, description: string): Promise<void> {
+    if (!this.configured) {
+      throw new Error('AWS Secrets Manager not configured');
+    }
+
     try {
+      const fullPath = secretPath.includes('/') 
+        ? `Oslira/${secretPath}`
+        : `Oslira/${secretPath}`;
+
       const payload = {
-        Name: `Oslira/${secretName}`,
+        Name: fullPath,
         Description: description,
         SecretString: JSON.stringify({
           apiKey: secretValue,
@@ -132,35 +178,42 @@ isConfigured(): boolean {
         
         // If secret already exists, update it instead
         if (errorText.includes('already exists')) {
-          logger('info', 'Secret exists, updating instead', { secretName });
-          await this.putSecret(secretName, secretValue, 'migration');
+          logger('info', 'Secret exists, updating instead', { secretPath });
+          await this.putSecret(secretPath, secretValue, 'migration');
           return;
         }
         
         throw new Error(`AWS API error: ${response.status} - ${errorText}`);
       }
 
-      logger('info', 'Successfully created secret in AWS', { secretName });
+      logger('info', 'Successfully created secret in AWS', { secretPath });
 
     } catch (error: any) {
       logger('error', 'Failed to create secret in AWS', { 
-        secretName, 
+        secretPath, 
         error: error.message 
       });
-      throw new Error(`AWS Secrets creation failed: ${error.message}`);
+      throw new Error(`AWS Secrets creation failed for ${secretPath}: ${error.message}`);
     }
   }
 
-  async listSecrets(): Promise<string[]> {
+  /**
+   * List all secrets with optional prefix filter
+   */
+  async listSecrets(prefix: string = 'Oslira/'): Promise<string[]> {
+    if (!this.configured) {
+      throw new Error('AWS Secrets Manager not configured');
+    }
+
     try {
       const response = await this.makeAWSRequest('ListSecrets', {
         Filters: [
           {
             Key: 'name',
-            Values: ['Oslira/']
+            Values: [prefix]
           }
         ],
-        MaxResults: 20
+        MaxResults: 100
       });
 
       if (!response.ok) {
@@ -168,67 +221,47 @@ isConfigured(): boolean {
       }
 
       const data = await response.json();
-      const secretNames = data.SecretList?.map((secret: any) => 
-        secret.Name.replace('Oslira/', '')
-      ) || [];
+      const secretNames = data.SecretList?.map((secret: any) => secret.Name) || [];
+      
+      logger('info', 'Listed secrets from AWS', { 
+        count: secretNames.length,
+        prefix 
+      });
 
-      logger('info', 'Listed AWS secrets', { count: secretNames.length });
       return secretNames;
 
     } catch (error: any) {
-      logger('error', 'Failed to list AWS secrets', { error: error.message });
+      logger('error', 'Failed to list secrets', { 
+        error: error.message,
+        prefix
+      });
       return [];
     }
   }
 
-  async enableRotation(secretName: string, lambdaArn: string): Promise<void> {
-    try {
-      const payload = {
-        SecretId: `Oslira/${secretName}`,
-        RotationLambdaARN: lambdaArn,
-        RotationRules: {
-          ScheduleExpression: 'rate(7 days)', // Weekly rotation
-          Duration: 'PT30M' // 30 minutes rotation window
-        }
-      };
-
-      const response = await this.makeAWSRequest('RotateSecret', payload);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AWS API error: ${response.status} - ${errorText}`);
-      }
-
-      logger('info', 'Enabled rotation for secret', { secretName, lambdaArn });
-
-    } catch (error: any) {
-      logger('error', 'Failed to enable rotation', { 
-        secretName, 
-        error: error.message 
-      });
-      throw error;
-    }
-  }
+  // =============================================================================
+  // AWS SIGNATURE V4 IMPLEMENTATION
+  // =============================================================================
 
   private async makeAWSRequest(action: string, payload: any): Promise<Response> {
-    const endpoint = `https://secretsmanager.${this.region}.amazonaws.com/`;
-    const headers = await this.createAuthHeaders(action, JSON.stringify(payload));
+    const endpoint = `https://secretsmanager.${this.region}.amazonaws.com`;
+    const body = JSON.stringify(payload);
+    const headers = await this.getSignedHeaders(action, body);
 
     return fetch(endpoint, {
       method: 'POST',
       headers: {
-        ...headers,
         'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': `secretsmanager.${action}`
+        ...headers
       },
-      body: JSON.stringify(payload)
+      body: body
     });
   }
 
-  private async createAuthHeaders(action: string, payload: string): Promise<Record<string, string>> {
+  private async getSignedHeaders(action: string, payload: string): Promise<Record<string, string>> {
     const now = new Date();
-    const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
-    const dateStamp = amzDate.substr(0, 8);
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const dateStamp = amzDate.slice(0, 8);
 
     // Create canonical request
     const canonicalHeaders = [
