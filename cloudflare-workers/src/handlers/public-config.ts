@@ -1,57 +1,160 @@
 import type { Context } from 'hono';
 import { getEnhancedConfigManager } from '../services/enhanced-config-manager.js';
 import { generateRequestId, logger } from '../utils/logger.js';
-import { createStandardResponse } from '../utils/response.js';
 
+/**
+ * Handle public configuration requests
+ * Returns environment-specific public configuration for frontend
+ */
 export async function handlePublicConfig(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
+    // Get requested environment from query parameter or use Worker's APP_ENV
+    const requestedEnv = c.req.query('env') || c.env.APP_ENV || 'production';
+    const workerEnv = c.env.APP_ENV || 'production';
+    
+    // Security check: Validate requested environment matches Worker environment
+    if (requestedEnv !== workerEnv) {
+      logger('warn', 'Environment mismatch in config request', {
+        requestId,
+        requestedEnv,
+        workerEnv,
+        deniedAccess: true
+      });
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Environment mismatch: worker not authorized for requested environment'
+        }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    logger('info', 'Processing public config request', {
+      requestId,
+      environment: requestedEnv,
+      workerEnv
+    });
+
     const configManager = getEnhancedConfigManager(c.env);
     
-// Determine environment from Worker env
-const environment = c.env.APP_ENV || 'production';
-const isProduction = environment === 'production';
+    // Fetch all public config with environment prefix
+    const publicConfig = await configManager.getPublicConfig(requestedEnv);
 
-const publicConfig = {
-  supabaseUrl: await configManager.getConfig('SUPABASE_URL') || c.env.SUPABASE_URL,
-  supabaseAnonKey: await configManager.getConfig('SUPABASE_ANON_KEY') || c.env.SUPABASE_ANON_KEY,
-  stripePublishableKey: isProduction 
-    ? (c.env.STRIPE_LIVE_PUBLISHABLE_KEY || c.env.STRIPE_PUBLISHABLE_KEY)
-    : (c.env.STRIPE_TEST_PUBLISHABLE_KEY || c.env.STRIPE_PUBLISHABLE_KEY),
-  workerUrl: c.env.WORKER_URL,
-  environment: environment,
-  stripeMode: isProduction ? 'live' : 'test'
-};
+    // Validate all required values are present
+    const requiredKeys = ['supabaseUrl', 'supabaseAnonKey', 'stripePublishableKey', 'frontendUrl'];
+    const missingKeys = requiredKeys.filter(key => !publicConfig[key.toUpperCase().replace(/([A-Z])/g, '_$1')]);
     
-    logger('info', 'Public config served', { requestId });
-    
-    return new Response(JSON.stringify(publicConfig), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300'
-      }
-    });
-    
-  } catch (error: any) {
-    logger('error', 'Failed to serve public config', { error: error.message, requestId });
-    
-    // Return basic fallback
-    const fallback = {
-      supabaseUrl: c.env.SUPABASE_URL || 'https://jswzzihuqtjqvobfosks.supabase.co',
-      supabaseAnonKey: c.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ3NjcsImV4cCI6MjA1MDU1MDc2N30.Z7EQBfC8N4QQjl8uIi-cGLM4-MJb4LrUa1Dz6kqBWPU',
-      stripePublishableKey: c.env.STRIPE_PUBLISHABLE_KEY,
-      workerUrl: c.env.WORKER_URL,
-      fallback: true
+    if (missingKeys.length > 0) {
+      logger('error', 'Missing required public config keys', {
+        requestId,
+        environment: requestedEnv,
+        missingKeys
+      });
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Incomplete configuration',
+          missing: missingKeys
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Build response object with camelCase keys for frontend
+    const response = {
+      success: true,
+      data: {
+        supabaseUrl: publicConfig.SUPABASE_URL,
+        supabaseAnonKey: publicConfig.SUPABASE_ANON_KEY,
+        stripePublishableKey: publicConfig.STRIPE_PUBLISHABLE_KEY,
+        frontendUrl: publicConfig.FRONTEND_URL,
+        environment: requestedEnv
+      },
+      timestamp: new Date().toISOString(),
+      requestId
     };
-    
-    return new Response(JSON.stringify(fallback), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+
+    logger('info', 'Public config served successfully', {
+      requestId,
+      environment: requestedEnv,
+      keysServed: Object.keys(response.data)
     });
+
+    return new Response(
+      JSON.stringify(response),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Cache-Control': 'public, max-age=60', // 1 minute cache
+          'X-Request-ID': requestId
+        }
+      }
+    );
+
+  } catch (error: any) {
+    logger('error', 'Failed to serve public config', {
+      error: error.message,
+      stack: error.stack,
+      requestId
+    });
+
+    // Return minimal fallback config from environment variables
+    // This allows system to degrade gracefully if AWS is unavailable
+    const fallbackConfig = {
+      success: false,
+      error: 'Configuration service temporarily unavailable',
+      fallback: {
+        supabaseUrl: c.env.SUPABASE_URL || '',
+        supabaseAnonKey: c.env.SUPABASE_ANON_KEY || '',
+        stripePublishableKey: c.env.STRIPE_PUBLISHABLE_KEY || '',
+        frontendUrl: c.env.FRONTEND_URL || '',
+        environment: c.env.APP_ENV || 'production'
+      },
+      timestamp: new Date().toISOString(),
+      requestId
+    };
+
+    return new Response(
+      JSON.stringify(fallbackConfig),
+      {
+        status: 200, // Return 200 with fallback to prevent frontend errors
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache', // Don't cache fallback responses
+          'X-Request-ID': requestId,
+          'X-Config-Source': 'fallback'
+        }
+      }
+    );
   }
+}
+
+/**
+ * Handle OPTIONS preflight requests for CORS
+ */
+export async function handlePublicConfigOptions(c: Context): Promise<Response> {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400'
+    }
+  });
 }
