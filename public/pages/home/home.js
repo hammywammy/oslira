@@ -169,11 +169,14 @@ function setupInstagramDemo() {
     }
     
     console.log('🔥🔥🔥 [Home] EMERGENCY Delegating to HomeHandlers...');
-    console.log('🔥🔥🔥 [Home] window.HomeHandlers check:', {
-      exists: !!window.HomeHandlers,
-      hasRunMethod: !!(window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis),
-      allMethods: window.HomeHandlers ? Object.keys(window.HomeHandlers) : 'NOT_AVAILABLE'
-    });
+ console.log('🔥🔥🔥 [Home] window.HomeHandlers check:', {
+  exists: !!window.HomeHandlers,
+  type: typeof window.HomeHandlers,
+  hasRunMethod: !!(window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis),
+  allMethods: (window.HomeHandlers && typeof window.HomeHandlers === 'object') 
+    ? Object.keys(window.HomeHandlers) 
+    : 'NOT_AVAILABLE'
+});
     
     // Delegate to handlers in homeHandlers.js
     if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
