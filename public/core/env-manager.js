@@ -189,7 +189,7 @@ class OsliraEnvManager {
                     environment: this.environment
                 });
                 
-                const response = await fetch(`${this.workerUrl}/config?env=${this.environment}`, {
+                const response = await fetch(`${this.workerUrl}/api/public-config?env=${this.environment}`, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
