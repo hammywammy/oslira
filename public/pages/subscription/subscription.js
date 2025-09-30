@@ -32,10 +32,20 @@ async function initializeSubscriptionPage() {
         await window.OsliraEnv.ready();
         console.log('✅ [Subscription] Config ready, proceeding with initialization');
         
-        subscriptionState.currentUser = window.OsliraApp.user;
-        subscriptionState.currentSession = window.OsliraApp.session;
+        // Get authenticated user from auth-manager
+        if (!window.OsliraAuth?.user) {
+            console.error('❌ [Subscription] No authenticated user');
+            window.location.href = '/auth';
+            return;
+        }
+        
+        // Set user and supabase in subscription state
+        subscriptionState.currentUser = window.OsliraAuth.user;
+        subscriptionState.currentSession = window.OsliraAuth.session;
         subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
+        
+        console.log('👤 [Subscription] User loaded:', subscriptionState.currentUser.email);
         
         const actualConfig = await window.OsliraConfig.getConfig();
         
