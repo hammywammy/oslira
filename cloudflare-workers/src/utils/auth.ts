@@ -67,7 +67,7 @@ export async function extractUserFromJWT(token: string, env: Env, requestId: str
   try {
     const { getApiKey } = await import('../services/enhanced-config-manager.js');
     const supabaseUrl = await getApiKey('SUPABASE_URL', env);
-    const supabaseKey = await getApiKey('SUPABASE_ANON_KEY', env);
+    const supabaseKey = await getApiKey('SUPABASE_SERVICE_ROLE', env);  // ✅ USE SERVICE ROLE
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
