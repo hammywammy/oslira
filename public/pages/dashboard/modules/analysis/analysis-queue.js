@@ -10,7 +10,7 @@ constructor(container) {
     this.eventBus = container.get('eventBus');
     this.stateManager = container.get('stateManager');
     this.supabase = container.get('supabase');
-    this.osliraApp = container.get('osliraApp');
+    this.osliraAuth = container.get('osliraAuth');
     
     // Validate Supabase client during construction
     if (!this.supabase) {
