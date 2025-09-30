@@ -592,7 +592,7 @@ updateAnalysis(analysisId, updates) {
         completed.forEach(([id]) => this.removeAnalysis(id));
         
         if (completed.length > 0) {
-            this.osliraApp?.showMessage(`Cleared ${completed.length} completed analyses`, 'success');
+            this.osliraAuth?.showMessage(`Cleared ${completed.length} completed analyses`, 'success');
         }
     }
     
