@@ -34,11 +34,19 @@ class DashboardApp {
                 throw new Error('Dependency validation failed: ' + JSON.stringify(validation.issues));
             }
             
-            // Use DashboardCore for initialization
-            await DashboardCore.initialize(this.container);
-            
-            // Setup event system
-            DashboardEventSystem.setupHandlers(
+// Use DashboardCore for initialization
+await DashboardCore.initialize(this.container);
+
+// Sync business to OsliraAuth after initialization
+const businessManager = this.container.get('businessManager');
+const currentBusiness = businessManager.getCurrentBusiness();
+if (currentBusiness && window.OsliraAuth) {
+    window.OsliraAuth.business = currentBusiness;
+    console.log('✅ [DashboardApp] Business synced to OsliraAuth:', currentBusiness.business_name);
+}
+
+// Setup event system
+DashboardEventSystem.setupHandlers(
                 this.container.get('eventBus'),
                 this.container
             );
@@ -100,23 +108,8 @@ class DashboardApp {
             return new DashboardStateManager(eventBus);
         }, ['eventBus']);
 
-        // Register OsliraApp as a proxy
-        container.registerSingleton('osliraApp', new Proxy({}, {
-            get(target, prop) {
-                if (!window.OsliraApp) {
-                    throw new Error('OsliraApp not initialized');
-                }
-                return window.OsliraApp[prop];
-            },
-            has(target, prop) {
-                return window.OsliraApp && prop in window.OsliraApp;
-            }
-        }));
-        
-        // Register API wrapper if available
-        if (window.OsliraApp?.api) {
-            container.registerSingleton('api', window.OsliraApp.api);
-        }
+// Register OsliraAuth as direct reference
+container.registerSingleton('osliraAuth', window.OsliraAuth);
         
         // Register feature modules
         console.log('📋 [DashboardApp] Registering feature modules...');
