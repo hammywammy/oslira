@@ -1055,16 +1055,28 @@ async callAnalysisAPI(requestData) {
     
     try {
         // 1. GET SUPABASE URL FROM CONFIG
+        console.log('🔍 [EnhancedAnalysisQueue] Debug - Config availability:', {
+            hasOsliraConfig: !!window.OsliraConfig,
+            hasGetSupabaseUrl: !!window.OsliraConfig?.getSupabaseUrl,
+            hasOsliraEnv: !!window.OsliraEnv,
+            hasSupabaseUrl: !!window.OsliraEnv?.SUPABASE_URL,
+            configInitialized: window.OsliraConfig?.initialized,
+            envConfigLoaded: window.OsliraEnv?.configLoaded
+        });
+        
         let supabaseUrl;
         if (window.OsliraConfig?.getSupabaseUrl) {
-            supabaseUrl = await window.OsliraConfig.getSupabaseUrl();
+            supabaseUrl = window.OsliraConfig.getSupabaseUrl();
+            console.log('🔧 [EnhancedAnalysisQueue] Got URL from OsliraConfig:', supabaseUrl);
         } else if (window.OsliraEnv?.SUPABASE_URL) {
             supabaseUrl = window.OsliraEnv.SUPABASE_URL;
+            console.log('🔧 [EnhancedAnalysisQueue] Got URL from OsliraEnv:', supabaseUrl);
         } else {
+            console.error('❌ [EnhancedAnalysisQueue] No Supabase URL available');
             throw new Error('Supabase URL not configured');
         }
         
-        console.log('✅ [EnhancedAnalysisQueue] Supabase URL:', supabaseUrl);
+        console.log('✅ [EnhancedAnalysisQueue] Final Supabase URL:', supabaseUrl);
         
         // 2. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
         let supabaseClient;
