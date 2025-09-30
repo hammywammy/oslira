@@ -16,8 +16,8 @@ class BulkModal {
 
     getUserCredits() {
         // Get from actual user state - adapt this to your system
-        if (window.OsliraApp?.user?.credits) {
-            return window.OsliraApp.user.credits;
+        if (window.OsliraAuth?.user?.credits) {
+            return window.OsliraAuth.user.credits;
         }
         if (this.stateManager?.getState('user')?.credits) {
             return this.stateManager.getState('user').credits;
