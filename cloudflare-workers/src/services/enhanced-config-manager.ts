@@ -1,5 +1,4 @@
 import type { Env } from '../types/interfaces.js';
-import { fetchJson } from '../utils/helpers.js';
 import { getAWSSecretsManager } from './aws-secrets-manager.js';
 
 // Local logging function to avoid import issues in Worker environment
@@ -9,61 +8,60 @@ function logger(level: 'info' | 'warn' | 'error', message: string, data?: any, r
   console.log(JSON.stringify(logData));
 }
 
-interface ConfigItem {
-  key_name: string;
-  key_value: string;
-  environment: string;
-  updated_at: string;
-  source: 'supabase' | 'aws' | 'env';
-}
-
 class EnhancedConfigManager {
   private cache: Map<string, { value: string; expires: number; source: string }> = new Map();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private awsSecrets: any;
   
-  // Keys that should be stored in AWS Secrets Manager
+  // Keys that should be stored in AWS Secrets Manager (public + private)
   private readonly AWS_MANAGED_KEYS = [
+    // Public keys (safe for frontend)
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+    'STRIPE_PUBLISHABLE_KEY',
+    'FRONTEND_URL',
+    
+    // Private keys (backend only)
+    'SUPABASE_SERVICE_ROLE',
     'OPENAI_API_KEY',
-    'CLAUDE_API_KEY', 
+    'CLAUDE_API_KEY',
     'APIFY_API_TOKEN',
     'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'SUPABASE_SERVICE_ROLE',
-    'SUPABASE_ANON_KEY'
+    'STRIPE_WEBHOOK_SECRET'
   ];
 
-constructor(private env: Env) {
-  // Log what we actually receive
-  console.log('EnhancedConfigManager env keys:', Object.keys(env));
-  console.log('AWS vars check:', {
-    AWS_ACCESS_KEY_ID: typeof env.AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY: typeof env.AWS_SECRET_ACCESS_KEY,
-    values: {
-      accessKey: env.AWS_ACCESS_KEY_ID?.substring(0, 4) + '...',
-      secretKey: env.AWS_SECRET_ACCESS_KEY?.substring(0, 4) + '...'
+  constructor(private env: Env) {
+    try {
+      this.awsSecrets = getAWSSecretsManager(env);
+      if (this.awsSecrets.isConfigured()) {
+        logger('info', 'AWS Secrets Manager initialized successfully');
+      } else {
+        logger('warn', 'AWS Secrets Manager not configured, using fallback mode');
+      }
+    } catch (error: any) {
+      logger('error', 'AWS Secrets Manager initialization failed', { 
+        error: error.message,
+        hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
+        hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
+        region: env.AWS_REGION
+      });
+      this.awsSecrets = null;
     }
-  });
-
-  try {
-    this.awsSecrets = getAWSSecretsManager(env);
-    logger('info', 'AWS Secrets Manager initialized successfully');
-  } catch (error: any) {
-    logger('error', 'AWS Secrets Manager initialization failed', { 
-      error: error.message,
-      hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
-      hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
-      region: env.AWS_REGION
-    });
-    this.awsSecrets = null;
   }
-}
 
-  async getConfig(keyName: string): Promise<string> {
+  /**
+   * Get configuration value with environment-aware AWS path
+   * @param keyName - Config key name (e.g., "SUPABASE_URL")
+   * @param environment - Environment prefix (e.g., "production" or "staging")
+   */
+  async getConfig(keyName: string, environment?: string): Promise<string> {
+    // Build cache key with environment if provided
+    const cacheKey = environment ? `${environment}/${keyName}` : keyName;
+    
     // Check cache first
-    const cached = this.cache.get(keyName);
+    const cached = this.cache.get(cacheKey);
     if (cached && cached.expires > Date.now()) {
-      logger('info', `Config cache hit for ${keyName}`, { source: cached.source });
+      logger('info', `Config cache hit for ${cacheKey}`, { source: cached.source });
       return cached.value;
     }
 
@@ -71,63 +69,53 @@ constructor(private env: Env) {
       let value: string = '';
       let source: string = 'env';
 
-      // For sensitive keys, try AWS first
-      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets) {
+      // For AWS-managed keys, try AWS first
+      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets?.isConfigured()) {
         try {
-          value = await this.awsSecrets.getSecret(keyName);
+          // Build AWS path with environment prefix if provided
+          const awsPath = environment ? `${environment}/${keyName}` : keyName;
+          value = await this.awsSecrets.getSecret(awsPath);
           source = 'aws';
-          logger('info', `Retrieved ${keyName} from AWS Secrets Manager`);
+          logger('info', `Retrieved ${awsPath} from AWS Secrets Manager`);
         } catch (awsError: any) {
-          logger('warn', `AWS retrieval failed for ${keyName}, trying Supabase fallback`, { 
+          logger('warn', `AWS retrieval failed for ${keyName}, trying environment fallback`, { 
             error: awsError.message 
           });
           
-          // Fallback to Supabase
-          value = await this.getFromSupabase(keyName);
-          source = 'supabase';
-        }
-      } else {
-        // Non-sensitive keys use Supabase
-        try {
-          value = await this.getFromSupabase(keyName);
-          source = 'supabase';
-        } catch (supabaseError: any) {
-          logger('warn', `Supabase retrieval failed for ${keyName}, trying environment`, {
-            error: supabaseError.message
-          });
-          
-          // Final fallback to environment variable
+          // Fallback to environment variable
           value = this.env[keyName as keyof Env] || '';
           source = 'env';
         }
+      } else {
+        // Non-AWS-managed keys use environment variables only
+        value = this.env[keyName as keyof Env] || '';
+        source = 'env';
       }
 
       if (!value) {
-        logger('error', `No value found for config key: ${keyName}`);
+        logger('error', `No value found for config key: ${cacheKey}`);
         return '';
       }
 
       // Cache the result
-      this.cache.set(keyName, {
+      this.cache.set(cacheKey, {
         value,
         expires: Date.now() + this.CACHE_TTL,
         source
       });
 
-      logger('info', `Config retrieved successfully`, { keyName, source });
+      logger('info', `Config retrieved successfully`, { 
+        keyName, 
+        environment,
+        source,
+        hasValue: !!value,
+        valueLength: value?.length || 0
+      });
 
-      logger('info', 'Config retrieved with details', { 
-  keyName, 
-  source,
-  hasValue: !!value,
-  valueLength: value?.length || 0,
-  valuePrefix: value?.substring(0, 10) || 'NONE',
-  isValidOpenAIFormat: value?.startsWith('sk-') || false
-});
       return value;
 
     } catch (error: any) {
-      logger('error', `Failed to retrieve config for ${keyName}`, { error: error.message });
+      logger('error', `Failed to retrieve config for ${cacheKey}`, { error: error.message });
       
       // Last resort: environment variable
       const envValue = this.env[keyName as keyof Env] || '';
@@ -140,266 +128,148 @@ constructor(private env: Env) {
     }
   }
 
-  async updateConfig(keyName: string, newValue: string, updatedBy: string = 'system'): Promise<void> {
-    try {
-      // For sensitive keys, update AWS first, then Supabase as backup
-      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets) {
-        try {
-          await this.awsSecrets.putSecret(keyName, newValue, updatedBy);
-          logger('info', `Updated ${keyName} in AWS Secrets Manager`);
-          
-          // Also update Supabase as backup
-          await this.updateSupabase(keyName, newValue, updatedBy);
-          logger('info', `Updated ${keyName} in Supabase as backup`);
-          
-        } catch (awsError: any) {
-          logger('error', `Failed to update ${keyName} in AWS, using Supabase only`, {
-            error: awsError.message
-          });
-          
-          // If AWS fails, at least update Supabase
-          await this.updateSupabase(keyName, newValue, updatedBy);
-        }
-      } else {
-        // Non-sensitive keys only go to Supabase
-        await this.updateSupabase(keyName, newValue, updatedBy);
-        logger('info', `Updated ${keyName} in Supabase`);
-      }
-
-      // Clear cache for this key
-      this.cache.delete(keyName);
-      
-      // Trigger auto-sync notifications
-      await this.notifyConfigChange(keyName, updatedBy);
-
-    } catch (error: any) {
-      logger('error', `Failed to update config: ${keyName}`, { error: error.message });
-      throw error;
-    }
-  }
-
-  async migrateToAWS(keyName: string): Promise<void> {
+  /**
+   * Update configuration value in AWS
+   * @param keyName - Config key name
+   * @param newValue - New value
+   * @param environment - Environment to update (production/staging)
+   * @param updatedBy - Who/what updated the config
+   */
+  async updateConfig(
+    keyName: string, 
+    newValue: string, 
+    environment: string,
+    updatedBy: string = 'system'
+  ): Promise<void> {
     if (!this.AWS_MANAGED_KEYS.includes(keyName)) {
-      throw new Error(`${keyName} is not configured for AWS migration`);
+      throw new Error(`${keyName} is not configured for AWS management`);
     }
 
-    if (!this.awsSecrets) {
-      throw new Error('AWS Secrets Manager not available');
+    if (!this.awsSecrets?.isConfigured()) {
+      throw new Error('AWS Secrets Manager not configured');
     }
 
     try {
-      // Get current value from Supabase
-      const currentValue = await this.getFromSupabase(keyName);
-      
-      if (!currentValue) {
-        throw new Error(`No value found in Supabase for ${keyName}`);
-      }
+      // Update AWS with environment prefix
+      const awsPath = `${environment}/${keyName}`;
+      await this.awsSecrets.putSecret(awsPath, newValue, updatedBy);
+      logger('info', `Updated ${awsPath} in AWS Secrets Manager`);
 
-      // Create/update in AWS
-      await this.awsSecrets.createSecret(keyName, currentValue, `Oslira ${keyName} - migrated from Supabase`);
+      // Clear cache for this key in this environment
+      this.cache.delete(`${environment}/${keyName}`);
       
-      logger('info', `Successfully migrated ${keyName} to AWS Secrets Manager`);
-
-      // Clear cache to force re-fetch from AWS
-      this.cache.delete(keyName);
+      logger('info', `Config update complete for ${awsPath}`);
 
     } catch (error: any) {
-      logger('error', `Failed to migrate ${keyName} to AWS`, { error: error.message });
+      logger('error', `Failed to update config: ${keyName}`, { 
+        error: error.message,
+        environment 
+      });
       throw error;
     }
   }
 
-  async getConfigStatus(): Promise<Record<string, any>> {
-    const status: Record<string, any> = {};
+  /**
+   * Get all public configuration for a specific environment
+   * Used by the /config endpoint for frontend
+   */
+  async getPublicConfig(environment: string): Promise<Record<string, string>> {
+    const publicKeys = [
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY',
+      'STRIPE_PUBLISHABLE_KEY',
+      'FRONTEND_URL'
+    ];
 
-    for (const keyName of this.AWS_MANAGED_KEYS) {
+    const config: Record<string, string> = {};
+
+    for (const key of publicKeys) {
       try {
-        // Check AWS
-        let awsStatus = 'not_configured';
-        let awsLastUpdated = 'N/A';
-        
-        if (this.awsSecrets) {
-          try {
-            const awsValue = await this.awsSecrets.getSecret(keyName);
-            awsStatus = awsValue ? 'configured' : 'empty';
-          } catch {
-            awsStatus = 'error';
-          }
-        }
-
-        // Check Supabase
-        let supabaseStatus = 'not_configured';
-        let supabaseLastUpdated = 'N/A';
-        
-        try {
-          const supabaseValue = await this.getFromSupabase(keyName);
-          supabaseStatus = supabaseValue ? 'configured' : 'empty';
-          
-          // Get last updated timestamp
-          const configItem = await this.getSupabaseMetadata(keyName);
-          supabaseLastUpdated = configItem?.updated_at || 'N/A';
-        } catch {
-          supabaseStatus = 'error';
-        }
-
-        // Check environment variable
-        const envValue = this.env[keyName as keyof Env];
-        const envStatus = envValue ? 'configured' : 'not_configured';
-
-        status[keyName] = {
-          aws: {
-            status: awsStatus,
-            lastUpdated: awsLastUpdated
-          },
-          supabase: {
-            status: supabaseStatus,
-            lastUpdated: supabaseLastUpdated
-          },
-          environment: {
-            status: envStatus
-          },
-          recommended_source: this.AWS_MANAGED_KEYS.includes(keyName) ? 'aws' : 'supabase',
-          migration_needed: awsStatus !== 'configured' && this.AWS_MANAGED_KEYS.includes(keyName)
-        };
-
+        config[key] = await this.getConfig(key, environment);
       } catch (error: any) {
-        status[keyName] = {
+        logger('warn', `Failed to load public config key: ${key}`, { 
           error: error.message,
-          aws: { status: 'error' },
-          supabase: { status: 'error' },
-          environment: { status: 'unknown' }
-        };
+          environment 
+        });
+        // Set empty string for missing keys
+        config[key] = '';
       }
     }
 
-    return status;
+    return config;
   }
-private async getFromSupabase(keyName: string): Promise<string> {
-  // FIXED: Use environment variable directly to avoid circular dependency
-  const serviceRoleKey = this.env.SUPABASE_SERVICE_ROLE;
-  
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE not found in environment variables');
-  }
-  
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json'
-  };
 
-    const response = await fetchJson<ConfigItem[]>(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production&select=key_value`,
-      { headers }
-    );
+  /**
+   * Validate that all required config exists for an environment
+   */
+  async validateEnvironmentConfig(environment: string): Promise<{
+    valid: boolean;
+    missing: string[];
+    present: string[];
+  }> {
+    const requiredKeys = [
+      'SUPABASE_URL',
+      'SUPABASE_ANON_KEY',
+      'SUPABASE_SERVICE_ROLE',
+      'STRIPE_PUBLISHABLE_KEY',
+      'STRIPE_SECRET_KEY',
+      'FRONTEND_URL'
+    ];
 
-    if (!response.length) {
-      return '';
+    const missing: string[] = [];
+    const present: string[] = [];
+
+    for (const key of requiredKeys) {
+      try {
+        const value = await this.getConfig(key, environment);
+        if (value) {
+          present.push(key);
+        } else {
+          missing.push(key);
+        }
+      } catch {
+        missing.push(key);
+      }
     }
 
-    return this.decryptValue(response[0].key_value);
-  }
-
-  private async updateSupabase(keyName: string, newValue: string, updatedBy: string): Promise<void> {
-    const headers = {
-      apikey: this.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
+    return {
+      valid: missing.length === 0,
+      missing,
+      present
     };
-
-    const encryptedValue = this.encryptValue(newValue);
-
-    await fetchJson(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production`,
-      {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-          key_value: encryptedValue,
-          updated_at: new Date().toISOString(),
-          updated_by: updatedBy
-        })
-      }
-    );
   }
 
-  private async getSupabaseMetadata(keyName: string): Promise<ConfigItem | null> {
-    const headers = {
-      apikey: this.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
+  /**
+   * Clear cache for specific key or all cache
+   */
+  clearCache(keyName?: string, environment?: string): void {
+    if (keyName && environment) {
+      this.cache.delete(`${environment}/${keyName}`);
+      logger('info', `Cleared cache for ${environment}/${keyName}`);
+    } else if (keyName) {
+      // Clear all environment versions of this key
+      const keysToDelete = Array.from(this.cache.keys()).filter(k => k.endsWith(`/${keyName}`) || k === keyName);
+      keysToDelete.forEach(k => this.cache.delete(k));
+      logger('info', `Cleared cache for all environments of ${keyName}`);
+    } else {
+      this.cache.clear();
+      logger('info', 'Cleared all config cache');
+    }
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): {
+    size: number;
+    keys: string[];
+    ttl: number;
+  } {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys()),
+      ttl: this.CACHE_TTL
     };
-
-    const response = await fetchJson<ConfigItem[]>(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production&select=*`,
-      { headers }
-    );
-
-    return response.length > 0 ? response[0] : null;
-  }
-
-  private async notifyConfigChange(keyName: string, updatedBy: string): Promise<void> {
-    try {
-      // Trigger your existing auto-sync system
-      const notificationPromises = [];
-
-      // Trigger Netlify rebuild
-      if (this.env.NETLIFY_BUILD_HOOK_URL) {
-        notificationPromises.push(
-          fetch(this.env.NETLIFY_BUILD_HOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              trigger: 'aws_config_update',
-              keyName,
-              updatedBy,
-              timestamp: new Date().toISOString()
-            })
-          })
-        );
-      }
-
-      // Clear CDN cache
-      if (this.env.CLOUDFLARE_ZONE_ID && this.env.CLOUDFLARE_API_TOKEN) {
-        notificationPromises.push(
-          fetch(`https://api.cloudflare.com/client/v4/zones/${this.env.CLOUDFLARE_ZONE_ID}/purge_cache`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.env.CLOUDFLARE_API_TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              files: [
-                `${this.env.WORKER_URL || ''}/config`,
-                `${this.env.WORKER_URL || ''}/v1/config`
-              ]
-            })
-          })
-        );
-      }
-
-      await Promise.allSettled(notificationPromises);
-      
-      logger('info', 'Config change notifications sent', { keyName, updatedBy });
-
-    } catch (error: any) {
-      logger('warn', 'Failed to send config change notifications', { 
-        keyName, 
-        error: error.message 
-      });
-    }
-  }
-
-  private decryptValue(encryptedValue: string): string {
-    try {
-      return atob(encryptedValue);
-    } catch {
-      return encryptedValue;
-    }
-  }
-
-  private encryptValue(value: string): string {
-    return btoa(value);
   }
 }
 
@@ -413,9 +283,10 @@ export function getEnhancedConfigManager(env: Env): EnhancedConfigManager {
   return enhancedConfigManager;
 }
 
-// Backward compatibility - replace your existing exports
+// Backward compatibility aliases
 export const getConfigManager = getEnhancedConfigManager;
-export async function getApiKey(keyName: string, env: Env): Promise<string> {
+
+export async function getApiKey(keyName: string, env: Env, environment?: string): Promise<string> {
   const manager = getEnhancedConfigManager(env);
-  return await manager.getConfig(keyName);
+  return await manager.getConfig(keyName, environment);
 }
