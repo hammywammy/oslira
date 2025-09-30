@@ -39,15 +39,14 @@ export async function validateJWTToken(token: string, env: Env, requestId: strin
 
 async function verifyJWTSignature(token: string, env: Env): Promise<boolean> {
   try {
-    // In production, you would verify against Supabase's JWT secret
-    // For now, we'll do basic validation since Supabase handles this
+    const { getApiKey } = await import('../services/enhanced-config-manager.js');
+    const supabaseUrl = await getApiKey('SUPABASE_URL', env, env.APP_ENV);
+    const serviceRole = await getApiKey('SUPABASE_SERVICE_ROLE', env, env.APP_ENV);
     
-    // If using Supabase auth, the token is already validated by Supabase
-    // Additional verification can be done by calling Supabase's user endpoint
-    const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'apikey': env.SUPABASE_SERVICE_ROLE  // ✅ USE SERVICE ROLE KEY
+        'apikey': serviceRole
       }
     });
 
