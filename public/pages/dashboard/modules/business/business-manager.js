@@ -10,7 +10,7 @@ class BusinessManager {
         this.container = container;
         this.eventBus = container.get('eventBus');
         this.stateManager = container.get('stateManager');
-        this.osliraApp = container.get('osliraApp');
+        this.osliraAuth = container.get('osliraAuth');
         
         // Business data cache
         this.businessCache = new Map();
@@ -28,8 +28,8 @@ class BusinessManager {
         this.eventBus.on('auth:changed', this.handleAuthChange.bind(this));
         
 // Business loading will be controlled by TimingManager
-if (this.osliraApp?.user) {
-    console.log('👤 [BusinessManager] User available at init:', this.osliraApp.user.email);
+if (this.osliraAuth?.user) {
+    console.log('👤 [BusinessManager] User available at init:', this.osliraAuth.user.email);
     console.log('📋 [BusinessManager] Business loading deferred to TimingManager');
 } else {
     console.warn('⚠️ [BusinessManager] No user data available at init');
@@ -46,7 +46,7 @@ if (this.osliraApp?.user) {
         try {
             console.log('🏢 [BusinessManager] Loading business profiles...');
             
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (!this.supabase || !user) {
                 console.warn('⚠️ [BusinessManager] No user or database connection');
                 return [];
@@ -324,7 +324,7 @@ businessSelect.innerHTML = optionsHTML;
         const businessSelect = document.getElementById('business-id');
         if (businessSelect && businessSelect.value) {
             localStorage.setItem('selectedBusinessId', businessSelect.value);
-            this.osliraApp?.showMessage('Default business profile saved!', 'success');
+            this.osliraAuth?.showMessage('Default business profile saved!', 'success');
             
             console.log('✅ [BusinessManager] Default business profile saved:', businessSelect.value);
         }
@@ -337,7 +337,7 @@ businessSelect.innerHTML = optionsHTML;
     async debugBusinessProfiles() {
         console.log('🔍 [BusinessManager] Debug business profiles...');
         
-        const user = this.osliraApp?.user;
+        const user = this.osliraAuth?.user;
         console.log('Debug state:', {
             hasSupabase: !!this.supabase,
             hasUser: !!user,
@@ -397,7 +397,7 @@ businessSelect.innerHTML = optionsHTML;
         try {
             console.log('🏢 [BusinessManager] Creating new business profile...');
             
-            const user = this.osliraApp?.user;
+            const user = this.osliraAuth?.user;
             if (!this.supabase || !user) {
                 throw new Error('Authentication required');
             }
