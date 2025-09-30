@@ -17,9 +17,9 @@ class OsliraAuth {
     async initialize() {
         console.log('🔐 [Auth] Initializing authentication system...');
         
-        if (window.SimpleAuth) {
-            await window.SimpleAuth.initialize();
-        }
+if (window.OsliraAuth) {
+    await window.OsliraAuth.initialize();
+}
         
         this.setupEventListeners();
         this.showStep('options');
@@ -161,7 +161,7 @@ class OsliraAuth {
             this.showLoading('Checking account...');
             this.currentEmail = email;
             
-const userCheck = await window.SimpleAuth.checkUserExists(email);
+const userCheck = await window.OsliraAuth.checkUserExists(email);
 
 if (userCheck.exists && userCheck.completed) {
     // User completed signup - go to signin
@@ -175,7 +175,7 @@ if (userCheck.exists && userCheck.completed) {
     this.authMode = 'signup';
     
     // Clear any existing session before starting new signup
-    await window.SimpleAuth.supabase.auth.signOut();
+    await window.OsliraAuth.supabase.auth.signOut();
     
     await this.sendEmailVerification(email);
 }
@@ -193,7 +193,7 @@ async sendEmailVerification(email) {
         this.showLoading('Sending verification code...');
         
         // Use the signup method instead of signInWithOtp to force OTP
-        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
+        const { data, error } = await window.OsliraeAuth.supabase.auth.signUp({
             email: email,
             password: 'temp_password_' + Math.random(), // Temporary password
             options: {
@@ -248,7 +248,7 @@ async handleOtpSubmit(e) {
         this.hideError();
         this.showLoading('Verifying code...');
         
-        const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
+        const { data, error } = await window.OsliraAuth.supabase.auth.verifyOtp({
             email: this.currentEmail,
             token: otpCode,
             type: 'email'
@@ -257,7 +257,7 @@ async handleOtpSubmit(e) {
         if (error) throw error;
         
         console.log('✅ OTP verified, user in auth.users:', data);
-        window.SimpleAuth.session = data.session;
+        window.OsliraAuth.session = data.session;
         
         this.authMode = 'set-password';
         this.showLoading('Email verified! Set your password...');
@@ -336,7 +336,7 @@ try {
 async handleSignin(password) {
     this.showLoading('Signing you in...');
     
-    const result = await window.SimpleAuth.signInWithPassword(this.currentEmail, password);
+    const result = await window.OsliraAuth.signInWithPassword(this.currentEmail, password);
     
     this.showLoading('Welcome back! Redirecting...');
     setTimeout(() => {
@@ -349,19 +349,19 @@ async handleSetPassword(password) {
     
     try {
         // Set password for existing auth user
-        const { error } = await window.SimpleAuth.supabase.auth.updateUser({
+        const { error } = await window.OsliraAuth.supabase.auth.updateUser({
             password: password
         });
         
         if (error) throw error;
         
 // NOW create the user record in custom users table - THIS IS THE ONLY PLACE
-const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
+const { data: { user } } = await window.OsliraAuth.supabase.auth.getUser();
 
 if (user) {
     console.log('💾 [Auth] Creating user record in custom users table (ONLY after password set)...');
     
-    const { error: insertError } = await window.SimpleAuth.supabase
+    const { error: insertError } = await window.OsliraAuth.supabase
         .from('users')
         .insert([{
             id: user.id,
@@ -423,7 +423,7 @@ async handleSignup(password) {
             this.hideError();
             this.showLoading('Connecting to Google...');
             
-            await window.SimpleAuth.signInWithGoogle();
+            await window.OsliraAuth.signInWithGoogle();
             
         } catch (error) {
             console.error('❌ [Auth] Google sign-in failed:', error);
