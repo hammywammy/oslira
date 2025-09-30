@@ -253,7 +253,7 @@ container.registerFactory('insightsPanel', () => new window.InsightsPanel(contai
      * Check if dashboard is ready
      */
     isReady() {
-        return this.initialized && this.container && window.OsliraApp?.user;
+        return this.initialized && this.container && window.osliraAuth?.user;
     }
     
     /**
@@ -261,7 +261,7 @@ container.registerFactory('insightsPanel', () => new window.InsightsPanel(contai
      */
     getCurrentUser() {
         try {
-            return this.container.get('osliraApp').user;
+            return this.container.get('osliraAuth').user;
         } catch (error) {
             console.error('❌ [DashboardApp] Failed to get current user:', error);
             return null;
