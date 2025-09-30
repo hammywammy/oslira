@@ -2,14 +2,19 @@
 // ENVIRONMENT INTERFACE (UPDATED)
 // ===============================================================================
 export interface Env {
-  // AWS Credentials (Cloudflare secrets ONLY)
+  // AWS Credentials (Cloudflare secrets)
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   AWS_REGION: string;
   
+  // Environment identifier (Cloudflare var, not secret)
+  APP_ENV: string;
+  
   // Cloudflare bindings
   OSLIRA_KV: KVNamespace;
   R2_CACHE_BUCKET: R2Bucket;
+  
+  // ALL other secrets retrieved from AWS Secrets Manager at runtime
 }
 
 // ===============================================================================
