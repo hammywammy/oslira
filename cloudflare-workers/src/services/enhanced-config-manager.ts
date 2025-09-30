@@ -51,29 +51,33 @@ private readonly AWS_MANAGED_KEYS = [
    * @param keyName - Config key name (e.g., "SUPABASE_URL")
    * @param environment - Environment prefix (e.g., "production" or "staging")
    */
-  async getConfig(keyName: string, environment?: string): Promise<string> {
-    // Build cache key with environment if provided
-    const cacheKey = environment ? `${environment}/${keyName}` : keyName;
-    
-    // Check cache first
-    const cached = this.cache.get(cacheKey);
-    if (cached && cached.expires > Date.now()) {
-      logger('info', `Config cache hit for ${cacheKey}`, { source: cached.source });
-      return cached.value;
-    }
+async getConfig(keyName: string, environment?: string): Promise<string> {
+  // For AWS-managed keys, environment is REQUIRED
+  // Auto-detect from worker environment if not provided
+  if (this.AWS_MANAGED_KEYS.includes(keyName) && !environment) {
+    environment = this.env.APP_ENV || 'production';
+    logger('info', `Auto-detected environment for ${keyName}`, { environment });
+  }
+  
+  // Build cache key with environment if provided
+  const cacheKey = environment ? `${environment}/${keyName}` : keyName;
+  
+  // Check cache first
+  const cached = this.cache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    logger('info', `Config cache hit for ${cacheKey}`, { source: cached.source });
+    return cached.value;
+  }
 
-    try {
-      let value: string = '';
-      let source: string = 'env';
-
-if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets?.isConfigured()) {
   try {
-    // CRITICAL: All AWS paths MUST include environment prefix
-    // Format: production/KEY or staging/KEY
-    if (!environment) {
-      throw new Error(`Environment required for AWS-managed key: ${keyName}`);
-    }
-    const awsPath = `${environment}/${keyName}`;
+    let value: string = '';
+    let source: string = 'env';
+
+    // For AWS-managed keys, try AWS first
+    if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets?.isConfigured()) {
+      try {
+        // Build AWS path with environment prefix (now guaranteed to exist)
+        const awsPath = `${environment}/${keyName}`;
     value = await this.awsSecrets.getSecret(awsPath);
     source = 'aws';
     logger('info', `Retrieved ${awsPath} from AWS Secrets Manager`);
