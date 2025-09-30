@@ -3,13 +3,14 @@
 // =============================================================================
 
 class AuthManager {
-    constructor() {
-        this.isLoaded = false;
-        this.loadPromise = null;
-        this.supabase = null;
-        this.session = null;
-        this.user = null;
-        this.businesses = [];
+constructor() {
+    this.isLoaded = false;
+    this.loadPromise = null;
+    this.supabase = null;
+    this.session = null;
+    this.user = null;
+    this.business = null; // ← ADD THIS
+    this.businesses = [];
         
         // Start loading immediately
         this.loadPromise = this.initialize();
@@ -512,18 +513,5 @@ const authManager = new AuthManager();
 
 // Export to window for global access
 window.OsliraAuth = authManager;
-
-// Also create a simplified global auth object for backward compatibility
-window.SimpleAuth = {
-    initialize: () => authManager.initialize(),
-    isAuthenticated: () => authManager.isAuthenticated(),
-    getCurrentSession: () => authManager.getCurrentSession(),
-    getCurrentUser: () => authManager.getCurrentUser(),
-    signOut: () => authManager.signOut(),
-    supabase: () => authManager.supabase,
-    signInWithGoogle: () => authManager.signInWithGoogle(),
-    signInWithEmail: (email, password) => authManager.signInWithEmail(email, password),
-    signUpWithEmail: (email, password, username) => authManager.signUpWithEmail(email, password, username)
-};
 
 console.log('🔐 [Auth] AuthManager initialized and exposed as window.OsliraAuth');
