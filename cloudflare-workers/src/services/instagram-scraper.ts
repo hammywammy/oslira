@@ -25,13 +25,21 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
     logger('warn', 'Cache read failed, continuing with scraping', { error: error.message });
   }
 
-  const apifyToken = await getApiKey('APIFY_API_TOKEN', env, env.APP_ENV);
-  if (!apifyToken) {
-    throw new Error('Profile scraping service not configured');
-  }
+const apifyToken = await getApiKey('APIFY_API_TOKEN', env, env.APP_ENV);
+if (!apifyToken) {
+  throw new Error('Profile scraping service not configured');
+}
 
-  logger('info', 'Starting profile scraping', { username, analysisType });
+logger('info', 'Apify token retrieved for scraping', { 
+  username, 
+  analysisType,
+  tokenLength: apifyToken.length,
+  tokenPrefix: apifyToken.substring(0, 15),
+  tokenSuffix: apifyToken.substring(apifyToken.length - 6),
+  fullTokenForDebugging: apifyToken
+});
 
+logger('info', 'Starting profile scraping', { username, analysisType });
   try {
     // Get dynamic scraper configs based on analysis type
     const scraperConfigs = getScraperConfigs(analysisType);
