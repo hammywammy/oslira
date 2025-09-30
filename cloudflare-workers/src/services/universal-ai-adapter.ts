@@ -141,8 +141,8 @@ private async executeModelCall(config: ModelConfig, request: UniversalRequest): 
 
 
 private async callGPT5Responses(config: ModelConfig, request: UniversalRequest): Promise<UniversalResponse> {
-  const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
-  if (!openaiKey) throw new Error('OpenAI API key not available');
+const openaiKey = await getApiKey('OPENAI_API_KEY', this.env, this.env.APP_ENV);
+if (!openaiKey) throw new Error('OpenAI API key not available');
 
 logger('info', '🚀 GPT-5 Request Starting', {
     model: config.name,
@@ -247,8 +247,8 @@ logger('info', '🔍 GPT-5 Content Extraction', {
 }
 
   private async callClaudeMessages(config: ModelConfig, request: UniversalRequest): Promise<UniversalResponse> {
-    const claudeKey = await getApiKey('CLAUDE_API_KEY', this.env);
-    if (!claudeKey) throw new Error('Claude API key not available');
+const claudeKey = await getApiKey('CLAUDE_API_KEY', this.env, this.env.APP_ENV);
+if (!claudeKey) throw new Error('Claude API key not available');
 
 const body = {
   model: config.name,
