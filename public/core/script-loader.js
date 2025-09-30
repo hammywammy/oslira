@@ -27,6 +27,7 @@ this.coreScripts = [
         this.pageConfigs = {
             'dashboard': {
                 scripts: [
+                    '/core/api-client.js',
                     '/core/sidebar/sidebar-manager.js',
                     '/pages/dashboard/modules/core/DashboardCore.js',
                     '/pages/dashboard/modules/core/DashboardErrorSystem.js',
@@ -66,6 +67,7 @@ this.coreScripts = [
             
             'home': {
                 scripts: [
+                    '/core/api-client.js',
                     '/pages/home/homeHandlers.js',
                     '/pages/home/home.js',
                     '/core/footer/footer-manager.js'
