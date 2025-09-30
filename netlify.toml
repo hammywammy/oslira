@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "npm run build:tailwind"
+  command = "npm run build"
   edge_functions = "netlify/edge-functions" 
 
 [functions]
