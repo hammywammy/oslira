@@ -1,5 +1,5 @@
 // =============================================================================
-// SUBSCRIPTION PAGE - PRODUCTION
+// SUBSCRIPTION PAGE - WITH CONFIG WAIT
 // =============================================================================
 
 let subscriptionState = {
@@ -27,13 +27,16 @@ async function initializeSubscriptionPage() {
     try {
         console.log('🔧 [Subscription] Starting initialization...');
         
-        // Populate state from global objects
+        // CRITICAL: Wait for config to be loaded
+        console.log('⏳ [Subscription] Waiting for config to be ready...');
+        await window.OsliraEnv.ready();
+        console.log('✅ [Subscription] Config ready, proceeding with initialization');
+        
         subscriptionState.currentUser = window.OsliraApp.user;
         subscriptionState.currentSession = window.OsliraApp.session;
         subscriptionState.supabase = window.OsliraAuth.supabase;
         subscriptionState.config = window.OsliraConfig;
         
-        // Get actual config object (ConfigManager instance requires .getConfig())
         const actualConfig = await window.OsliraConfig.getConfig();
         
         if (actualConfig?.stripePublishableKey && typeof Stripe !== 'undefined') {
@@ -47,7 +50,6 @@ async function initializeSubscriptionPage() {
         
         console.log('✅ [Subscription] Initialized:', subscriptionState.currentUser.email);
         
-        // Initialize components
         setupAuthStateMonitoring();
         await loadSubscriptionData();
         setupEventListeners();
@@ -63,7 +65,6 @@ async function initializeSidebar() {
     try {
         console.log('📋 [Subscription] Initializing sidebar...');
         
-        // Wait for sidebar manager
         let attempts = 0;
         while (!window.sidebarManager && attempts < 50) {
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -95,16 +96,14 @@ async function loadSubscriptionData() {
     try {
         showLoading();
         
-        // Fetch user profile with subscription_id
-const { data: profile, error: profileError } = await subscriptionState.supabase
-    .from('users')
-    .select('*, credits_used_current_period, subscription_id')
+        const { data: profile, error: profileError } = await subscriptionState.supabase
+            .from('users')
+            .select('*, credits_used_current_period, subscription_id')
             .eq('id', subscriptionState.currentUser.id)
             .single();
         
         if (profileError) throw profileError;
         
-        // Fetch subscription using subscription_id from user profile
         let subscription = null;
         if (profile.subscription_id) {
             const { data: subData, error: subError } = await subscriptionState.supabase
@@ -120,7 +119,6 @@ const { data: profile, error: profileError } = await subscriptionState.supabase
             }
         }
         
-        // Determine current plan
         let currentPlan = 'free';
         if (subscription && subscription.status === 'active') {
             currentPlan = subscription.plan?.toLowerCase() || 'free';
@@ -165,7 +163,6 @@ function updateSubscriptionUI(profile, subscription) {
     
     const currentPlanInfo = planInfo[subscriptionState.currentPlan] || planInfo['free'];
     
-    // Update current plan header
     const currentPlanElement = document.getElementById('current-plan');
     if (currentPlanElement) {
         currentPlanElement.textContent = subscription && subscription.status === 'active' 
@@ -173,7 +170,6 @@ function updateSubscriptionUI(profile, subscription) {
             : 'Plan Not Detected';
     }
     
-    // Update next billing info
     const nextBillingText = document.querySelector('#next-billing-date')?.parentElement?.previousElementSibling;
     if (subscription && subscription.status === 'active' && subscription.current_period_end) {
         const nextBilling = new Date(subscription.current_period_end);
@@ -192,11 +188,9 @@ function updateSubscriptionUI(profile, subscription) {
         }
     }
     
-    // Update sidebar plan
     const sidebarPlanElement = document.getElementById('sidebar-plan');
     if (sidebarPlanElement) sidebarPlanElement.textContent = currentPlanInfo.name;
     
-    // Update sidebar billing
     const sidebarBillingElement = document.getElementById('sidebar-billing');
     if (subscription && subscription.status === 'active' && sidebarBillingElement) {
         const nextBilling = new Date(subscription.current_period_end);
@@ -205,6 +199,7 @@ function updateSubscriptionUI(profile, subscription) {
         sidebarBillingElement.textContent = 'Free plan - no billing';
     }
 }
+
 function updatePricingCards(currentPlan) {
     console.log('🎨 [Subscription] Updating pricing cards for plan:', currentPlan);
     
@@ -223,15 +218,12 @@ function updatePricingCards(currentPlan) {
             return;
         }
         
-        // Remove existing badges
         const existingBadge = card.querySelector('.current-badge');
         if (existingBadge) existingBadge.remove();
         
-        // Reset styling
         card.classList.remove('current-plan-card');
         
         if (cardPlan === currentPlan) {
-            // Current plan styling
             card.classList.add('current-plan-card');
             
             const badge = document.createElement('div');
@@ -245,7 +237,6 @@ function updatePricingCards(currentPlan) {
             button.classList.remove('btn-primary');
             button.classList.add('bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
         } else {
-            // Non-current plan styling
             button.classList.remove('current', 'bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
             button.classList.add('btn-primary');
             button.disabled = false;
@@ -267,7 +258,6 @@ function updatePricingCards(currentPlan) {
 function updateUsageOverview(profile, subscription, currentPlan) {
     console.log('📈 [Subscription] Updating usage overview...');
     
-    // Credit limits by plan
     const creditLimits = {
         'free': 25,
         'starter': 100,
@@ -281,7 +271,6 @@ function updateUsageOverview(profile, subscription, currentPlan) {
     const remainingCredits = Math.max(0, totalCredits - usedCredits);
     const creditPercentage = (usedCredits / totalCredits) * 100;
     
-    // Update credits display
     const creditsUsedText = document.querySelector('.usage-credits-text');
     if (creditsUsedText) {
         creditsUsedText.textContent = `${usedCredits} / ${totalCredits}`;
@@ -292,13 +281,11 @@ function updateUsageOverview(profile, subscription, currentPlan) {
         creditsBar.style.width = `${Math.min(creditPercentage, 100)}%`;
     }
     
-    // Update credits remaining in billing info
     const creditsRemainingElement = document.getElementById('credits-remaining');
     if (creditsRemainingElement) {
         creditsRemainingElement.textContent = `${remainingCredits} / ${totalCredits}`;
     }
     
-    // Team members (hardcoded for now - extend based on your team logic)
     const teamLimits = {
         'free': 1,
         'starter': 1,
@@ -318,7 +305,6 @@ function updateUsageOverview(profile, subscription, currentPlan) {
         teamBar.style.width = `${(1 / teamLimit) * 100}%`;
     }
     
-    // Days until renewal
     if (subscription && subscription.current_period_end) {
         const endDate = new Date(subscription.current_period_end);
         const today = new Date();
@@ -331,12 +317,10 @@ function updateUsageOverview(profile, subscription, currentPlan) {
         
         const renewalBar = document.querySelector('.usage-renewal-bar');
         if (renewalBar) {
-            // Assume 30-day billing cycle
             const renewalPercentage = ((30 - daysRemaining) / 30) * 100;
             renewalBar.style.width = `${Math.max(0, Math.min(renewalPercentage, 100))}%`;
         }
         
-        // Update next billing date in header
         const nextBillingElement = document.getElementById('next-billing-date');
         if (nextBillingElement) {
             nextBillingElement.textContent = endDate.toLocaleDateString('en-US', {
@@ -363,15 +347,12 @@ function updateUsageOverview(profile, subscription, currentPlan) {
 function setupEventListeners() {
     console.log('🎧 [Subscription] Setting up event listeners...');
     
-    // Logout
     const logoutLink = document.getElementById('logout-link');
     if (logoutLink) logoutLink.addEventListener('click', handleLogout);
     
-    // Manage billing
     const manageBillingBtn = document.getElementById('manage-billing-btn');
     if (manageBillingBtn) manageBillingBtn.addEventListener('click', handleManageBilling);
     
-    // Plan buttons
     document.querySelectorAll('.card-button').forEach(button => {
         button.addEventListener('click', handlePlanSelection);
     });
@@ -534,14 +515,12 @@ async function createCheckoutSession(plan) {
 function getPriceId(plan) {
     const isProduction = window.OsliraEnv?.IS_PRODUCTION || false;
     
-    // Test mode price IDs (staging/development)
     const testPriceIds = {
         'starter': 'price_1SCmaBJzvcRSqGG3RGL3WrRC',
         'professional': 'price_1SCmafJzvcRSqGG3tzSaS6o1',
         'agency': 'price_1SCmb3JzvcRSqGG3xTcq7w7E'
     };
     
-    // Live mode price IDs (production)
     const livePriceIds = {
         'starter': 'price_1SCmN0JzvcRSqGG33DY89imT',
         'professional': 'price_1SCmNaJzvcRSqGG3VAcbi4Og',
