@@ -59,17 +59,17 @@
         
         console.log('✅ [Onboarding] User authenticated:', user.email);
 
-        if (!window.OsliraApiClient) {
-            console.error('❌ [Onboarding] API client not available');
-            showError('System initialization incomplete. Please refresh the page.');
-            return;
-        }
+if (!window.OsliraAPI) {
+    console.error('❌ [Onboarding] API client not available');
+    showError('API client initialization failed. Please refresh the page.');
+    return;
+}
 
-        if (typeof window.OsliraApiClient.request !== 'function') {
-            console.error('❌ [Onboarding] API client not properly instantiated');
-            showError('API client initialization failed. Please refresh the page.');
-            return;
-        }
+if (typeof window.OsliraAPI.request !== 'function') {
+    console.error('❌ [Onboarding] API client not properly instantiated');
+    showError('API client initialization failed. Please refresh the page.');
+    return;
+}
         
         validator.initialize();
         showOnboardingForm();
