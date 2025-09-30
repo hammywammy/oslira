@@ -1081,7 +1081,7 @@ async callAnalysisAPI(requestData) {
         // 2. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
         let supabaseClient;
         if (window.OsliraAuth?.supabase) {
-            supabaseClient = window.OsliraAuth.supabase();
+            supabaseClient = window.OsliraAuth.supabase;
             console.log('✅ [EnhancedAnalysisQueue] Using OsliraAuth client');
         } else {
             throw new Error('OsliraAuth not available - cannot get session');
