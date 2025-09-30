@@ -48,7 +48,12 @@ export async function handlePublicConfig(c: Context): Promise<Response> {
 
     // Validate all required values are present
     const requiredKeys = ['supabaseUrl', 'supabaseAnonKey', 'stripePublishableKey', 'frontendUrl'];
-    const missingKeys = requiredKeys.filter(key => !publicConfig[key.toUpperCase().replace(/([A-Z])/g, '_$1')]);
+    // Validate all required values are present
+const missingKeys = [];
+if (!publicConfig.SUPABASE_URL) missingKeys.push('supabaseUrl');
+if (!publicConfig.SUPABASE_ANON_KEY) missingKeys.push('supabaseAnonKey');
+if (!publicConfig.STRIPE_PUBLISHABLE_KEY) missingKeys.push('stripePublishableKey');
+if (!publicConfig.FRONTEND_URL) missingKeys.push('frontendUrl');
     
     if (missingKeys.length > 0) {
       logger('error', 'Missing required public config keys', {
