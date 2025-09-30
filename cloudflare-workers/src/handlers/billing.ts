@@ -72,16 +72,13 @@ export async function handleCreateCheckoutSession(c: Context): Promise<Response>
 
 // Get Stripe secret key based on environment
 const environment = c.env.APP_ENV || 'production';
-const isProduction = environment === 'production';
-
-const stripeSecretKey = isProduction
-  ? await getApiKey(c.env, 'STRIPE_SECRET_KEY') || c.env.STRIPE_LIVE_SECRET_KEY
-  : await getApiKey(c.env, 'STRIPE_SECRET_KEY') || c.env.STRIPE_TEST_SECRET_KEY;
+const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env, environment);
 
 if (!stripeSecretKey) {
   logger('error', 'Stripe secret key not configured', { environment, requestId });
   return c.json(createStandardResponse(false, undefined, 'Stripe not configured', requestId), 500);
 }
+
 
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -128,8 +125,8 @@ export async function handleCreatePortalSession(c: Context): Promise<Response> {
       return c.json(createStandardResponse(false, undefined, 'customerId is required', requestId), 400);
     }
 
-    // Get Stripe secret key from centralized config
-    const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env);
+const environment = c.env.APP_ENV || 'production';
+const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env, environment);
 
     const stripeResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
       method: 'POST',
