@@ -66,18 +66,30 @@ class DashboardInitializer {
     async initializeApp() {
         console.log('📱 [Dashboard] Initializing dashboard app...');
         
-        // Wait for OsliraApp to be available
-        for (let i = 0; i < 50; i++) {
-            if (window.OsliraApp?.user) {
-                console.log('👤 [Dashboard] OsliraApp available with user');
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (!window.OsliraApp?.user) {
-            throw new Error('OsliraApp not available or user not authenticated');
-        }
+// Wait for SimpleAuth (which loads before dashboard page scripts)
+if (!window.OsliraAuth) {
+    throw new Error('OsliraAuth not available');
+}
+
+// Get user from auth-manager
+await window.OsliraAuth.initialize();
+const user = window.OsliraAuth.user;
+
+if (!user) {
+    console.log('❌ [Dashboard] No authenticated user, redirecting to auth');
+    window.location.href = '/auth';
+    return;
+}
+
+// Create OsliraApp alias for backwards compatibility
+window.OsliraApp = {
+    user: user,
+    supabase: window.OsliraAuth.supabase,
+    getCurrentUser: () => window.OsliraAuth.user,
+    getSession: () => window.OsliraAuth.session
+};
+
+console.log('✅ [Dashboard] OsliraApp compatibility layer created');
         
         // Create and initialize the dashboard app
         this.app = new DashboardApp();
