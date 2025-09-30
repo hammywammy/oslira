@@ -13,15 +13,15 @@ class ScriptLoader {
         this.failedScripts = new Set();
         this.loadingPromises = new Map();
         
-        // Core script loading order (must load in sequence)
-        this.coreScripts = [
-            'env-manager',
-            'timing-manager',
-            'supabase',
-            'config-manager', 
-            'auth-manager',
-            'simple-app'
-        ];
+
+// Core script loading order (handled in phases within loadCoreScripts)
+this.coreScripts = [
+    'env-manager',
+    'supabase',
+    'config-manager', 
+    'auth-manager',
+    'simple-app'
+];
         
         // Page-specific script configurations
         this.pageConfigs = {
@@ -238,48 +238,70 @@ class ScriptLoader {
     // CORE SCRIPTS LOADING
     // =============================================================================
     
-    async loadCoreScripts() {
-        console.log('🔧 [ScriptLoader] Loading core scripts...');
-        
-        for (const scriptName of this.coreScripts) {
-            let scriptPath;
-            
-            if (scriptName === 'supabase') {
-                scriptPath = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-            } else {
-                scriptPath = `/core/${scriptName}.js`;
-            }
-            
-            try {
-                await this.loadScript(scriptName, scriptPath);
-                
-                const globalName = this.getGlobalName(scriptName);
-                if (globalName && !window[globalName]) {
-                    throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
-                } else if (scriptName === 'supabase' && !window.supabase?.createClient) {
-                    throw new Error('Supabase CDN failed to expose createClient function');
-                }
-                
-                await this.wait(100);
-                
-            } catch (error) {
-                console.error(`❌ [ScriptLoader] Core script ${scriptName} failed:`, error);
-                throw error;
-            }
-        }
+async loadCoreScripts() {
+    console.log('🔧 [ScriptLoader] Loading core scripts in phases...');
+    
+    // Phase 1: Bootstrap - env-manager only
+    console.log('📦 [ScriptLoader] Phase 1: Bootstrap');
+    await this.loadScript('env-manager', '/core/env-manager.js');
+    if (!window.OsliraEnv) {
+        throw new Error('env-manager failed to expose OsliraEnv global');
+    }
+    await this.wait(50);
+    
+    // Phase 2: Config Fetch - wait for async AWS config
+    console.log('⏳ [ScriptLoader] Phase 2: Waiting for config from AWS...');
+    try {
+        await window.OsliraEnv.ready();
+        console.log('✅ [ScriptLoader] Config loaded successfully');
+    } catch (error) {
+        console.error('❌ [ScriptLoader] Config loading failed:', error);
+        throw error;
     }
     
-    getGlobalName(scriptName) {
-        const globalMap = {
-            'env-manager': 'OsliraEnv',
-            'timing-manager': 'OsliraTimingManager',
-            'supabase': null,
-            'config-manager': 'OsliraConfig', 
-            'auth-manager': 'OsliraAuth',
-            'simple-app': 'OsliraSimpleApp'
-        };
-        return globalMap[scriptName];
+    // Phase 3: Core Dependencies (config guaranteed available)
+    console.log('📦 [ScriptLoader] Phase 3: Core dependencies');
+    
+    await this.loadScript('supabase', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    if (!window.supabase?.createClient) {
+        throw new Error('Supabase CDN failed to expose createClient function');
     }
+    await this.wait(100);
+    
+    await this.loadScript('config-manager', '/core/config-manager.js');
+    if (!window.OsliraConfig) {
+        throw new Error('config-manager failed to expose OsliraConfig global');
+    }
+    await this.wait(100);
+    
+    // Phase 4: Auth & App
+    console.log('📦 [ScriptLoader] Phase 4: Auth & App');
+    
+    await this.loadScript('auth-manager', '/core/auth-manager.js');
+    if (!window.OsliraAuth) {
+        throw new Error('auth-manager failed to expose OsliraAuth global');
+    }
+    await this.wait(100);
+    
+    await this.loadScript('simple-app', '/core/simple-app.js');
+    if (!window.OsliraSimpleApp) {
+        throw new Error('simple-app failed to expose OsliraSimpleApp global');
+    }
+    await this.wait(100);
+    
+    console.log('✅ [ScriptLoader] All core scripts loaded');
+}
+    
+getGlobalName(scriptName) {
+    const globalMap = {
+        'env-manager': 'OsliraEnv',
+        'supabase': null,
+        'config-manager': 'OsliraConfig', 
+        'auth-manager': 'OsliraAuth',
+        'simple-app': 'OsliraSimpleApp'
+    };
+    return globalMap[scriptName];
+}
     
     // =============================================================================
     // PAGE SCRIPT LOADING WITH CONFIG WAIT
