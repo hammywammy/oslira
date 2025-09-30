@@ -10,19 +10,25 @@ import { createStandardResponse } from '../utils/response.js';
 import { validateJWTToken, extractUserFromJWT } from '../utils/auth.js';
 
 // ===============================================================================
-// HELPER: GET SUPABASE CONFIG FROM AWS
+// HELPER: GET SUPABASE CONFIG FROM AWS (CACHED PER REQUEST)
 // ===============================================================================
 
+let _cachedSupabaseUrl: string | null = null;
+let _cachedServiceRole: string | null = null;
+
 async function getSupabaseUrl(env: Env): Promise<string> {
+  if (_cachedSupabaseUrl) return _cachedSupabaseUrl;
   const { getApiKey } = await import('../services/enhanced-config-manager.js');
-  return await getApiKey('SUPABASE_URL', env, env.APP_ENV);
+  _cachedSupabaseUrl = await getApiKey('SUPABASE_URL', env, env.APP_ENV);
+  return _cachedSupabaseUrl;
 }
 
 async function getSupabaseServiceRole(env: Env): Promise<string> {
+  if (_cachedServiceRole) return _cachedServiceRole;
   const { getApiKey } = await import('../services/enhanced-config-manager.js');
-  return await getApiKey('SUPABASE_SERVICE_ROLE', env, env.APP_ENV);
+  _cachedServiceRole = await getApiKey('SUPABASE_SERVICE_ROLE', env, env.APP_ENV);
+  return _cachedServiceRole;
 }
-
 // ===============================================================================
 // INTERFACES
 // ===============================================================================
