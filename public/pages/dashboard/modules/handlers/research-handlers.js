@@ -224,9 +224,8 @@ try {
     }
     return;
 }
-            // Make the API call
-            const apiUrl = `${workerUrl}/v1/analyze`;
-            console.log('📡 [ResearchHandlers] API endpoint:', apiUrl);
+// Make the API call using API client
+console.log('📡 [ResearchHandlers] Making API call...');
 
 const result = await window.OsliraAPI.request('/v1/analyze', {
     method: 'POST',
