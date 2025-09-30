@@ -145,10 +145,15 @@ class DashboardApp {
             return new BusinessManager(container);
         }, []);
 
-        container.registerFactory('modalManager', () => {
-            return new ModalManager(container);
-        }, []);
-        // Register UI components
+container.registerFactory('modalManager', () => {
+    return new ModalManager(container);
+}, []);
+
+container.registerFactory('researchHandlers', () => {
+    return new ResearchHandlers();
+}, []);
+
+// Register UI components
 container.registerFactory('dashboardHeader', () => {
     const header = new DashboardHeader(container);
     console.log('🏭 [DependencyContainer] DashboardHeader factory created');
