@@ -50,32 +50,27 @@ class HomeHandlers {
       
       console.log('📡 [HomeHandlers] Making API call to:', `${this.workerUrl}/v1/analyze-anonymous`);
       
-      // Call anonymous analysis endpoint
-      const response = await fetch(`${this.workerUrl}/v1/analyze-anonymous`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          username: handle.replace('@', '')
-        })
-      });
-      
-      console.log('📡 [HomeHandlers] API response status:', response.status);
-      console.log('📡 [HomeHandlers] API response headers:', [...response.headers.entries()]);
-      
-      const result = await response.json();
-      console.log('📡 [HomeHandlers] API response data:', result);
-      
-      if (!response.ok) {
-        if (response.status === 429) {
-          // Rate limit hit - show login modal
-          console.log('⏰ [HomeHandlers] Rate limit hit, showing modal');
-          this.showRateLimitModal(result.metadata?.remaining || 0, result.metadata?.resetIn || 24);
-          return;
-        }
-        throw new Error(result.error || `API Error: ${response.status}`);
-      }
+// Call anonymous analysis endpoint using API client
+const result = await window.OsliraAPI.request('/v1/analyze-anonymous', {
+  method: 'POST',
+  body: JSON.stringify({
+    username: handle.replace('@', '')
+  }),
+  skipAuth: true  // Anonymous endpoint, no login required
+});
+
+console.log('📡 [HomeHandlers] API response data:', result);
+
+// Check for rate limit in response
+if (result.error && result.error.includes('rate limit')) {
+  console.log('⏰ [HomeHandlers] Rate limit hit, showing modal');
+  this.showRateLimitModal(result.metadata?.remaining || 0, result.metadata?.resetIn || 24);
+  return;
+}
+
+if (!result.success && result.error) {
+  throw new Error(result.error);
+}
       
       // Show real analysis results in modal
       console.log('✅ [HomeHandlers] Analysis successful, showing results');
