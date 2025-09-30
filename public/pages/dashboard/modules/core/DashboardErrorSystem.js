@@ -305,8 +305,8 @@ class DashboardErrorSystem {
      * Show message to user
      */
     static showUserMessage(message, type = 'error') {
-        if (window.OsliraApp?.showMessage) {
-            window.OsliraApp.showMessage(message, type);
+        if (window.osliraAuth?.showMessage) {
+            window.osliraAuth.showMessage(message, type);
         } else {
             // Fallback to console and alert
             console.error('User Message:', message);
