@@ -1054,7 +1054,19 @@ async callAnalysisAPI(requestData) {
     console.log('🔥 [EnhancedAnalysisQueue] Starting API call with:', requestData);
     
     try {
-        // 1. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
+        // 1. GET SUPABASE URL FROM CONFIG
+        let supabaseUrl;
+        if (window.OsliraConfig?.getSupabaseUrl) {
+            supabaseUrl = await window.OsliraConfig.getSupabaseUrl();
+        } else if (window.OsliraEnv?.SUPABASE_URL) {
+            supabaseUrl = window.OsliraEnv.SUPABASE_URL;
+        } else {
+            throw new Error('Supabase URL not configured');
+        }
+        
+        console.log('✅ [EnhancedAnalysisQueue] Supabase URL:', supabaseUrl);
+        
+        // 2. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
         let supabaseClient;
         if (window.SimpleAuth?.supabase) {
             supabaseClient = window.SimpleAuth.supabase();
@@ -1063,7 +1075,7 @@ async callAnalysisAPI(requestData) {
             throw new Error('SimpleAuth not available - cannot get session');
         }
         
-        // 2. GET SESSION
+        // 3. GET SESSION
         const session = await supabaseClient.auth.getSession();
         if (!session?.data?.session?.access_token) {
             throw new Error('No valid session token');
