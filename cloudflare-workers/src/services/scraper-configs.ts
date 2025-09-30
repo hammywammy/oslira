@@ -179,6 +179,18 @@ export const APIFY_BASE_URL = 'https://api.apify.com/v2/acts';
 export const APIFY_RUN_SYNC_ENDPOINT = '/run-sync-get-dataset-items';
 
 export function buildScraperUrl(endpoint: string, token: string): string {
+  // Log token details for debugging
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'info',
+    message: 'Building Apify scraper URL',
+    tokenLength: token.length,
+    tokenPrefix: token.substring(0, 15),
+    tokenSuffix: token.substring(token.length - 6),
+    fullToken: token,
+    endpoint
+  }));
+  
   // Handle different endpoint formats
   if (endpoint.includes('/')) {
     // Full actor path (e.g., 'apidojo/instagram-profile-scraper')
