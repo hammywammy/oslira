@@ -14,21 +14,18 @@ class EnhancedConfigManager {
   private awsSecrets: any;
   
   // Keys that should be stored in AWS Secrets Manager (public + private)
-  private readonly AWS_MANAGED_KEYS = [
-    // Public keys (safe for frontend)
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
-    'STRIPE_PUBLISHABLE_KEY',
-    'FRONTEND_URL',
-    
-    // Private keys (backend only)
-    'SUPABASE_SERVICE_ROLE',
-    'OPENAI_API_KEY',
-    'CLAUDE_API_KEY',
-    'APIFY_API_TOKEN',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET'
-  ];
+private readonly AWS_MANAGED_KEYS = [
+  'SUPABASE_URL',
+  'FRONTEND_URL',
+  'APIFY_API_TOKEN',
+  'CLAUDE_API_KEY',
+  'OPENAI_API_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_PUBLISHABLE_KEY',
+  'SUPABASE_SERVICE_ROLE',
+  'SUPABASE_ANON_KEY'
+];
 
   constructor(private env: Env) {
     try {
@@ -69,28 +66,36 @@ class EnhancedConfigManager {
       let value: string = '';
       let source: string = 'env';
 
-      // For AWS-managed keys, try AWS first
-      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets?.isConfigured()) {
-        try {
-          // Build AWS path with environment prefix if provided
-          const awsPath = environment ? `${environment}/${keyName}` : keyName;
-          value = await this.awsSecrets.getSecret(awsPath);
-          source = 'aws';
-          logger('info', `Retrieved ${awsPath} from AWS Secrets Manager`);
-        } catch (awsError: any) {
-          logger('warn', `AWS retrieval failed for ${keyName}, trying environment fallback`, { 
-            error: awsError.message 
-          });
-          
-          // Fallback to environment variable
-          value = this.env[keyName as keyof Env] || '';
-          source = 'env';
-        }
-      } else {
-        // Non-AWS-managed keys use environment variables only
-        value = this.env[keyName as keyof Env] || '';
-        source = 'env';
-      }
+if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets?.isConfigured()) {
+  try {
+    // CRITICAL: All AWS paths MUST include environment prefix
+    // Format: production/KEY or staging/KEY
+    if (!environment) {
+      throw new Error(`Environment required for AWS-managed key: ${keyName}`);
+    }
+    const awsPath = `${environment}/${keyName}`;
+    value = await this.awsSecrets.getSecret(awsPath);
+    source = 'aws';
+    logger('info', `Retrieved ${awsPath} from AWS Secrets Manager`);
+} catch (awsError: any) {
+    logger('error', `AWS retrieval failed for ${keyName} - NO FALLBACK AVAILABLE`, { 
+      error: awsError.message,
+      environment 
+    });
+    // AWS-managed keys should NEVER fall back to env vars
+    // They exist ONLY in AWS with environment prefix
+    throw new Error(`Failed to retrieve AWS-managed key ${keyName}: ${awsError.message}`);
+  }
+} else {
+  // Non-AWS-managed keys MUST be in Cloudflare environment variables
+  // Examples: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, ADMIN_TOKEN
+  value = this.env[keyName as keyof Env] || '';
+  source = 'env';
+  
+  if (!value) {
+    logger('error', `Non-AWS key not found in environment: ${keyName}`);
+  }
+}
 
       if (!value) {
         logger('error', `No value found for config key: ${cacheKey}`);
@@ -173,19 +178,21 @@ class EnhancedConfigManager {
    * Get all public configuration for a specific environment
    * Used by the /config endpoint for frontend
    */
-  async getPublicConfig(environment: string): Promise<Record<string, string>> {
-    const publicKeys = [
-      'SUPABASE_URL',
-      'SUPABASE_ANON_KEY',
-      'STRIPE_PUBLISHABLE_KEY',
-      'FRONTEND_URL'
-    ];
+async getPublicConfig(environment: string): Promise<Record<string, string>> {
+  // ALL public keys are in AWS with environment prefix
+  const publicKeys = [
+    'SUPABASE_URL',
+    'SUPABASE_ANON_KEY',
+    'STRIPE_PUBLISHABLE_KEY',
+    'FRONTEND_URL'
+  ];
 
-    const config: Record<string, string> = {};
+  const config: Record<string, string> = {};
 
-    for (const key of publicKeys) {
-      try {
-        config[key] = await this.getConfig(key, environment);
+  for (const key of publicKeys) {
+    try {
+      // ALWAYS pass environment for AWS-managed keys
+      config[key] = await this.getConfig(key, environment);
       } catch (error: any) {
         logger('warn', `Failed to load public config key: ${key}`, { 
           error: error.message,
@@ -207,14 +214,19 @@ class EnhancedConfigManager {
     missing: string[];
     present: string[];
   }> {
-    const requiredKeys = [
-      'SUPABASE_URL',
-      'SUPABASE_ANON_KEY',
-      'SUPABASE_SERVICE_ROLE',
-      'STRIPE_PUBLISHABLE_KEY',
-      'STRIPE_SECRET_KEY',
-      'FRONTEND_URL'
-    ];
+// All these keys MUST exist in AWS with environment prefix
+const requiredKeys = [
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE',
+  'STRIPE_PUBLISHABLE_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'FRONTEND_URL',
+  'OPENAI_API_KEY',
+  'CLAUDE_API_KEY',
+  'APIFY_API_TOKEN'
+];
 
     const missing: string[] = [];
     const present: string[] = [];
