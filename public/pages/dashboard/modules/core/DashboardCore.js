@@ -139,27 +139,28 @@ await leadManager.loadDashboardData();
         console.log('✅ [DashboardCore] Async dependencies resolved');
     }
     
-    /**
-     * Resolve Supabase client from SimpleAuth
-     */
-    static async resolveSupabaseClient() {
-        console.log('🔄 [DashboardCore] Resolving Supabase client...');
-        
-        let attempts = 0;
-        while (attempts < 50) {
-            if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-                const client = window.SimpleAuth.supabase();
-                if (client?.from && typeof client.from === 'function') {
-                    console.log('✅ [DashboardCore] Got Supabase client from SimpleAuth');
-                    return client;
-                }
+/**
+ * Resolve Supabase client from OsliraAuth
+ */
+static async resolveSupabaseClient() {
+    console.log('🔄 [DashboardCore] Resolving Supabase client...');
+    
+    let attempts = 0;
+    while (attempts < 50) {
+        if (window.OsliraAuth?.supabase) {
+            const client = window.OsliraAuth.supabase;
+            if (client?.from && typeof client.from === 'function') {
+                console.log('✅ [DashboardCore] Got Supabase client from OsliraAuth');
+                return client;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
         }
-        
-        throw new Error('SimpleAuth Supabase client not ready after timeout');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
+    
+    throw new Error('OsliraAuth Supabase client not ready after timeout');
+}
+    
 static async renderDashboardUI(container) {
     try {
         // ONLY render HTML, no initialization
@@ -220,9 +221,9 @@ static async renderDashboardUI(container) {
             const checkAuth = () => {
                 const osliraApp = window.OsliraApp;
                 const user = osliraApp?.user;
-                const simpleAuth = window.SimpleAuth;
+                const OsliraAuth = window.OsliraAuth;
                 
-                if (user && simpleAuth?.supabase) {
+                if (user && OsliraAuth?.supabase) {
                     console.log('✅ [DashboardCore] Authentication verified');
                     resolve(true);
                     return;
