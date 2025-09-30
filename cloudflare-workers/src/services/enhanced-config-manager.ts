@@ -24,7 +24,8 @@ private readonly AWS_MANAGED_KEYS = [
   'STRIPE_SECRET_KEY',
   'STRIPE_PUBLISHABLE_KEY',
   'SUPABASE_SERVICE_ROLE',
-  'SUPABASE_ANON_KEY'
+  'SUPABASE_ANON_KEY',
+  'ADMIN_TOKEN'
 ];
 
   constructor(private env: Env) {
