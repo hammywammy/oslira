@@ -66,7 +66,7 @@ class DashboardInitializer {
     async initializeApp() {
         console.log('📱 [Dashboard] Initializing dashboard app...');
         
-// Wait for SimpleAuth (which loads before dashboard page scripts)
+// Wait for OsliraAuth (which loads before dashboard page scripts)
 if (!window.OsliraAuth) {
     throw new Error('OsliraAuth not available');
 }
@@ -231,7 +231,7 @@ console.log('✅ [Dashboard] OsliraAuth compatibility layer created');
                     }
                     
                     const config = await window.OsliraConfig.getConfig();
-                    const session = window.SimpleAuth.getCurrentSession();
+                    const session = window.OsliraAuth.getCurrentSession();
                     
                     if (!session?.access_token) {
                         throw new Error('Authentication required');
@@ -494,8 +494,8 @@ const startDashboard = async () => {
         
         // Polling with shorter interval for faster response
         console.log('📄 [Dashboard] Setting up dependency polling...');
-        const pollForDependencies = setInterval(async () => {
-            if (window.OsliraAuth && window.SimpleAuth && !dashboardInitializer.initialized) {
+const pollForDependencies = setInterval(async () => {
+    if (window.OsliraAuth && !dashboardInitializer.initialized) {
                 console.log('📄 [Dashboard] Dependencies detected via polling, initializing...');
                 clearInterval(pollForDependencies);
                 await dashboardInitializer.init();
