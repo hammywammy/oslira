@@ -616,4 +616,23 @@ window.openLiveChat = function() {
     alert('Live chat coming soon! Please email support@oslira.com');
 };
 
+window.addEventListener('oslira:scripts:loaded', async () => {
+    try {
+        console.log('🚀 [Subscription] Scripts loaded, initializing...');
+        
+        // Wait for config
+        await window.OsliraEnv.ready();
+        
+        // Initialize sidebar first
+        await initializeSidebar();
+        
+        // Then initialize subscription page
+        await initializeSubscriptionPage();
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Initialization failed:', error);
+        showError('Failed to load subscription page. Please refresh.');
+    }
+});
+
 console.log('📦 [Subscription] Module ready');
