@@ -113,10 +113,10 @@ async function performAnonymousAnalysis(username: string, env: Env): Promise<any
 
 async function generateAnonymousInsights(profileData: any, env: Env): Promise<any> {
   try {
-    const openaiApiKey = await getApiKey('OPENAI_API_KEY', env);
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+const openaiApiKey = await getApiKey('OPENAI_API_KEY', env, env.APP_ENV);
+if (!openaiApiKey) {
+  throw new Error('OpenAI API key not configured');
+}
 
     logger('info', 'Starting GPT insights generation', {
       username: profileData.username,
