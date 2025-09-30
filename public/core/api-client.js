@@ -27,9 +27,16 @@ constructor(config, auth) {
 async request(endpoint, options = {}) {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
     
-    // Get fresh session token using the proper method
-    let accessToken = null;
-    
+// Check if auth should be skipped for anonymous endpoints
+const skipAuth = options.skipAuth === true;
+
+// Get fresh session token using the proper method
+let accessToken = null;
+
+// Skip auth token fetching for anonymous endpoints
+if (skipAuth) {
+    console.log('⚠️ [ApiClient] Skipping auth for anonymous endpoint');
+} else {
     // Try multiple methods to get the session token
     if (window.SimpleAuth?.supabase) {
         try {
@@ -53,19 +60,19 @@ async request(endpoint, options = {}) {
         console.log('✅ [ApiClient] Using token from global auth manager');
     }
     
-    if (!accessToken) {
-        throw new Error('No valid authentication token available');
-    }
+if (!accessToken && !skipAuth) {
+    throw new Error('No valid authentication token available');
+}
     
-    const config = {
-        timeout: this.timeout,
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-            ...options.headers
-        }
-    };
+const config = {
+    timeout: this.timeout,
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...(skipAuth ? {} : { 'Authorization': `Bearer ${accessToken}` }),
+        ...options.headers
+    }
+};
     
     console.log('🔥 [ApiClient] Making request:', {
         url,
