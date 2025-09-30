@@ -1114,38 +1114,14 @@ async callAnalysisAPI(requestData) {
             payload: requestData
         });
         
-        // 4. MAKE API CALL (NO DATABASE QUERIES)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.data.session.access_token}`,
-                'User-Agent': 'Oslira-Dashboard/1.0'
-            },
-            body: JSON.stringify(requestData),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        console.log('📨 [EnhancedAnalysisQueue] API response:', {
-            status: response.status,
-            ok: response.ok
-        });
-        
-        // 5. HANDLE RESPONSE
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        console.log('✅ [EnhancedAnalysisQueue] API call successful');
-        return { success: true, data: result };
-        
+// 4. MAKE API CALL USING API CLIENT
+const result = await window.OsliraAPI.request('/v1/analyze', {
+    method: 'POST',
+    body: JSON.stringify(requestData)
+});
+
+console.log('✅ [EnhancedAnalysisQueue] API call successful');
+return { success: true, data: result };
     } catch (error) {
         if (error.name === 'AbortError') {
             console.error('⏰ [EnhancedAnalysisQueue] Request timed out');
