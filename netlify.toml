@@ -57,6 +57,16 @@ Content-Security-Policy = """
   to = "/utils/:splat"
   status = 200
 
+# Favicon shortcut - browsers request this by default
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/assets/images/favicon.ico"
+  status = 200
+
+# ===========================
+# 🔁 Pretty URL Redirects
+# ===========================
+
 # ===========================
 # 🔁 Pretty URL Redirects
 # ===========================
