@@ -192,7 +192,12 @@ this.coreScripts = [
                 scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
                 requiresAuth: false,
                 enableTailwind: true
-            }
+            },
+            'contact-hub': {
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+}
         };
         
         console.log('📦 [ScriptLoader] Initialized');
