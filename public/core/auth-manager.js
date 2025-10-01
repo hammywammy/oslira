@@ -5,11 +5,12 @@
 class AuthManager {
 constructor() {
     this.isLoaded = false;
+    this.businessesLoaded = false; // NEW
     this.loadPromise = null;
     this.supabase = null;
     this.session = null;
     this.user = null;
-    this.business = null; // ← ADD THIS
+    this.business = null;
     this.businesses = [];
         
         // Start loading immediately
@@ -157,17 +158,19 @@ constructor() {
     // SESSION MANAGEMENT
     // =============================================================================
     
-    async handleSessionChange(session) {
-        this.session = session;
-        this.user = session?.user || null;
+async handleSessionChange(session) {
+    this.session = session;
+    this.user = session?.user || null;
+    
+    if (this.user) {
+        console.log('👤 [Auth] User authenticated:', this.user.email);
         
-        if (this.user) {
-            console.log('👤 [Auth] User authenticated:', this.user.email);
-            
-            // Load user businesses if available
-            await this.loadUserBusinesses();
-        }
+        // Load businesses in background WITHOUT blocking
+        this.loadUserBusinesses().catch(err => {
+            console.warn('⚠️ [Auth] Background business load failed:', err);
+        });
     }
+}
     
     async handleSignOut() {
         this.session = null;
@@ -221,6 +224,7 @@ constructor() {
     
 async loadUserBusinesses() {
     if (!this.supabase || !this.user) {
+        this.businessesLoaded = true; // Mark as loaded even if skipped
         return;
     }
     
@@ -233,18 +237,21 @@ async loadUserBusinesses() {
             .select('*')
             .eq('user_id', this.user.id);
             
-            if (error) {
-                console.error('❌ [Auth] Failed to load businesses:', error);
-                return;
-            }
-            
-            this.businesses = businesses || [];
-            console.log(`📊 [Auth] Loaded ${this.businesses.length} business profiles`);
-            
-        } catch (error) {
-            console.error('❌ [Auth] Error loading businesses:', error);
+        if (error) {
+            console.error('❌ [Auth] Failed to load businesses:', error);
+            this.businessesLoaded = true; // Mark as loaded even on error
+            return;
         }
+        
+        this.businesses = businesses || [];
+        this.businessesLoaded = true; // NEW - Mark as loaded
+        console.log(`📊 [Auth] Loaded ${this.businesses.length} business profiles`);
+        
+    } catch (error) {
+        console.error('❌ [Auth] Error loading businesses:', error);
+        this.businessesLoaded = true; // Mark as loaded even on error
     }
+}
     
     // =============================================================================
     // AUTHENTICATION METHODS
@@ -502,6 +509,36 @@ async loadUserBusinesses() {
             sessionExists: !!this.session
         };
     }
+
+    // =============================================================================
+// BUSINESS DATA HELPERS
+// =============================================================================
+
+async waitForBusinesses() {
+    // First ensure auth is loaded
+    if (!this.isLoaded) {
+        await this.loadPromise;
+    }
+    
+    // Then wait for businesses to load
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds max
+    
+    while (!this.businessesLoaded && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (!this.businessesLoaded) {
+        console.warn('⚠️ [Auth] Timeout waiting for businesses');
+    }
+    
+    return this.businesses;
+}
+
+hasBusinesses() {
+    return this.businessesLoaded && this.businesses.length > 0;
+}
 }
 
 // =============================================================================
