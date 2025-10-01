@@ -246,25 +246,6 @@ function setupCTAOptimizations() {
   // Track all CTA clicks
   const ctaButtons = document.querySelectorAll('[class*="btn-primary"], [class*="cta"]');
   
-ctaButtons.forEach(button => {
-  button.addEventListener('click', (e) => {
-    const ctaType = identifyCTAType(button);
-    conversionState.ctaClicked = true;
-    
-    trackConversionEvent('cta_clicked', {
-      type: ctaType,
-      text: button.textContent.trim(),
-      position: getCTAPosition(button)
-    });
-    
-    // If it's a main CTA, redirect to auth immediately (no animation/delay)
-    if (ctaType.includes('main') || ctaType.includes('primary')) {
-      e.preventDefault();
-      window.location.href = '/auth';
-    }
-  });
-});
-  
   // Setup hover effects for additional dopamine
   ctaButtons.forEach(button => {
     button.addEventListener('mouseenter', () => {
@@ -564,42 +545,10 @@ function showExitIntentCTA() {
   }
 }
 
-// =============================================================================
-// CONVERSION TRACKING & ANALYTICS
-// =============================================================================
-
 function trackConversionEvent(eventName, data = {}) {
-  if (!conversionTrackingEnabled) return;
-  
-  const eventData = {
-    event: eventName,
-    timestamp: new Date().toISOString(),
-    url: window.location.href,
-    userAgent: navigator.userAgent,
-    screen: {
-      width: window.screen.width,
-      height: window.screen.height
-    },
-    viewport: {
-      width: window.innerWidth,
-      height: window.innerHeight
-    },
-    state: conversionState,
-    ...data
-  };
-  
-  console.log('📊 [Conversion]', eventName, eventData);
-  
-  // Send to analytics service (if available)
-  if (typeof gtag !== 'undefined') {
-    gtag('event', eventName, {
-      event_category: 'conversion',
-      event_label: JSON.stringify(data),
-      value: 1
-    });
-  }
+  // Disabled - not collecting analytics
+  return;
 }
-
 // =============================================================================
 // STANDARD FUNCTIONALITY
 // =============================================================================
