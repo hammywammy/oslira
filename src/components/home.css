@@ -57,7 +57,11 @@
      ============================================================================= */
 
 .urgency-banner {
-  @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16 py-2;
+  @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16 py-2 opacity-0 transition-opacity duration-300;
+}
+
+.urgency-banner.show {
+  @apply opacity-100;
 }
 
   .urgency-banner p {
@@ -549,9 +553,9 @@
     @apply text-blue-100 text-sm mt-4;
   }
 
-  .final-urgency {
-    @apply text-blue-200 font-medium;
-  }
+.final-urgency {
+  @apply text-gray-900 font-medium;
+}
 
   /* =============================================================================
      MOBILE STICKY CTA
