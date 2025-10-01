@@ -37,7 +37,7 @@ Content-Security-Policy = """
 # Favicon shortcut - browsers request this by default
 [[redirects]]
   from = "/favicon.ico"
-  to = "public/assets/images/oslira-logo.png"
+  to = "/assets/images/oslira-logo.png"
   status = 200
 
 # ===========================
