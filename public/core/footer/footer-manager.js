@@ -75,6 +75,7 @@ class FooterManager {
     <h4 class="new-footer-nav-title">Resources</h4>
     <a href="/footer/docs" class="new-footer-nav-link">Docs</a>
     <a href="/footer/security" class="new-footer-nav-link">Security</a>
+    <a href="/footer/contact" class="new-footer-nav-link">Contact</a>
 </div>
                             <div class="new-footer-nav-group">
                                 <h4 class="new-footer-nav-title">Legal</h4>
