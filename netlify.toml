@@ -138,16 +138,6 @@ Content-Security-Policy = """
   status = 200
 
 [[redirects]]
-  from = "/footer/guides"
-  to = "pages/footer/guides/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/help"
-  to = "pages/footer/help/index.html"
-  status = 200
-
-[[redirects]]
   from = "/footer/pricing"
   to = "pages/footer/pricing/index.html"
   status = 200
@@ -162,6 +152,10 @@ Content-Security-Policy = """
   to = "pages/footer/status/index.html"
   status = 200
 
+[[redirects]]
+  from = "/footer/contact"
+  to = "pages/footer/contact/index.html"
+  status = 200
 # ===========================
 # 🔁 Legal Subpages
 # ===========================
