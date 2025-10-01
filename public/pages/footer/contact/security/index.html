@@ -242,9 +242,127 @@
 
                 <div class="guideline-item">
                     <strong style="color: #111827;">3. Allow Time to Fix</strong>
-                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">Give us reasonable time to address the issue before disclosure</p>
+                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">Give us reasonable time to address the issue before disclosure (typically 90 days)</p>
                 </div>
 
                 <div class="guideline-item">
                     <strong style="color: #111827;">4. Act in Good Faith</strong>
-                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">Don't exploit vulnerabilities or access data beyond what's necessary to
+                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">Don't exploit vulnerabilities or access data beyond what's necessary to demonstrate the issue</p>
+                </div>
+
+                <div class="guideline-item">
+                    <strong style="color: #111827;">5. Don't Cause Harm</strong>
+                    <p style="color: #6b7280; margin: 0.5rem 0 0 0;">Avoid actions that could degrade our service or destroy data</p>
+                </div>
+            </div>
+
+            <!-- PGP Encryption -->
+            <div class="info-section">
+                <h3 style="font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem;">🔐 Encrypted Communication</h3>
+                <p style="color: #374151; margin: 0;">For sensitive vulnerability disclosures, you can encrypt your message using our PGP public key. Contact security@oslira.com for our current PGP key.</p>
+            </div>
+
+            <!-- Bug Bounty -->
+            <div style="background: white; border-radius: 1rem; padding: 2rem; margin: 2rem 0; text-align: center;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 1rem;">🏆 Bug Bounty Program</h3>
+                <p style="color: #6b7280; margin-bottom: 1rem;">We appreciate security researchers who help us protect our users. Valid security vulnerabilities may be eligible for rewards.</p>
+                <p style="color: #374151; font-weight: 600;">Contact security@oslira.com for details about our bug bounty program</p>
+            </div>
+
+            <!-- What NOT to Report -->
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 0.75rem; padding: 1.5rem; margin: 2rem 0;">
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #92400e; margin-bottom: 1rem;">⚠️ Out of Scope</h3>
+                <p style="color: #78350f; margin-bottom: 0.5rem;">The following are NOT considered security vulnerabilities:</p>
+                <ul style="color: #78350f; line-height: 1.8; margin: 0.5rem 0 0 1.5rem;">
+                    <li>Missing security headers without demonstrable impact</li>
+                    <li>Denial of service attacks</li>
+                    <li>Social engineering attacks</li>
+                    <li>Reports from automated tools without validation</li>
+                    <li>Issues requiring physical access to a user's device</li>
+                    <li>Issues in third-party services we don't control</li>
+                </ul>
+            </div>
+
+            <!-- Security Contact Summary -->
+            <div style="background: white; border-radius: 1rem; padding: 2rem; margin: 2rem 0;">
+                <h3 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 1.5rem;">Contact Summary</h3>
+                <div style="color: #374151; line-height: 2;">
+                    <p><strong>Email:</strong> security@oslira.com</p>
+                    <p><strong>Response Time (Critical):</strong> Within 1 hour</p>
+                    <p><strong>Response Time (High):</strong> Within 4 hours</p>
+                    <p><strong>Response Time (Medium):</strong> Within 24 hours</p>
+                    <p><strong>Response Time (Low):</strong> Within 72 hours</p>
+                    <p><strong>PGP Key:</strong> Available upon request</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <script>
+        let footerInitialized = false;
+        
+        window.addEventListener('oslira:scripts:loaded', async () => {
+            try {
+                await initializeHeader();
+            } catch (error) {
+                console.error('❌ [ContactSecurity] Header initialization failed:', error);
+            }
+
+            if (footerInitialized) return;
+            
+            try {
+                footerInitialized = true;
+                await initializeFooter();
+            } catch (error) {
+                console.error('❌ [ContactSecurity] Footer initialization failed:', error);
+                footerInitialized = false;
+            }
+        });
+
+        async function initializeHeader() {
+            if (document.querySelector('.home-nav')) return;
+            
+            let container = document.getElementById('header-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'header-container';
+                document.body.insertBefore(container, document.body.firstChild);
+            }
+            
+            for (let i = 0; i < 50; i++) {
+                if (window.HeaderManager) break;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            if (!window.HeaderManager) throw new Error('HeaderManager not available');
+            
+            const headerManager = new window.HeaderManager();
+            headerManager.render('header-container', { type: 'footer-pages' });
+        }
+        
+        async function initializeFooter() {
+            if (document.querySelector('.new-footer-main')) return;
+            
+            let container = document.getElementById('footer-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'footer-container';
+                document.body.appendChild(container);
+            }
+            
+            for (let i = 0; i < 50; i++) {
+                if (window.FooterManager) break;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            if (!window.FooterManager) throw new Error('FooterManager not available');
+            
+            const footerManager = new window.FooterManager();
+            footerManager.render('footer-container');
+        }
+    </script>
+
+    <div id="footer-container"></div>
+</body>
+</html>
