@@ -693,10 +693,6 @@
   @apply text-red-800 text-center font-medium;
 }
 
-.final-urgency {
-  @apply text-gray-600 text-center mt-4;
-}
-
   /* =============================================================================
      ANIMATIONS & MICRO-INTERACTIONS
      ============================================================================= */
