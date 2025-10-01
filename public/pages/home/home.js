@@ -97,6 +97,14 @@ function initializeConversionOptimizations() {
   
   console.log('✅ [Home] Conversion optimizations ready');
 }
+
+// Show urgency banner after page loads - OUTSIDE the function
+setTimeout(() => {
+  const urgencyBanner = document.querySelector('.urgency-banner');
+  if (urgencyBanner) {
+    urgencyBanner.classList.add('show');
+  }
+}, 500);
 // =============================================================================
 // INSTAGRAM DEMO FUNCTIONALITY - UI SETUP ONLY
 // =============================================================================
