@@ -98,6 +98,7 @@ class OsliraEnvManager {
             '/footer/pricing': 'pricing',
             '/footer/security-page': 'security-page',
             '/footer/status': 'status',
+            '/footer/contact': 'contact-hub',
             
             // Legal pages (public)
             '/footer/legal/privacy': 'privacy',
@@ -110,7 +111,7 @@ class OsliraEnvManager {
         this.pageTypes = {
             PUBLIC: [
                 'home', 'about', 'api-docs', 'case-studies', 'guides', 'help', 
-                'pricing', 'security-page', 'status', 'privacy', 'terms', 
+                'pricing', 'security-page', 'status', 'contact-hub', 'privacy', 'terms', 
                 'refund', 'disclaimer'
             ],
             AUTH_ONLY: ['auth', 'auth-callback'], 
