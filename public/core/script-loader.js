@@ -241,51 +241,43 @@ this.coreScripts = [
     // =============================================================================
     
 async loadCoreScripts() {
-    console.log('🔧 [ScriptLoader] Loading core scripts in phases...');
+    console.log('🔧 [ScriptLoader] Loading core scripts with parallel optimization...');
     
-    // Phase 1: Bootstrap - env-manager only
+    // Phase 1: Bootstrap - env-manager only (REQUIRED FIRST)
     console.log('📦 [ScriptLoader] Phase 1: Bootstrap');
     await this.loadScript('env-manager', '/core/env-manager.js');
     if (!window.OsliraEnv) {
         throw new Error('env-manager failed to expose OsliraEnv global');
     }
-    await this.wait(50);
     
-    // Phase 2: Config Fetch - wait for async AWS config
-    console.log('⏳ [ScriptLoader] Phase 2: Waiting for config from AWS...');
-    try {
-        await window.OsliraEnv.ready();
-        console.log('✅ [ScriptLoader] Config loaded successfully');
-    } catch (error) {
-        console.error('❌ [ScriptLoader] Config loading failed:', error);
-        throw error;
-    }
+    // Phase 2: Start parallel loads IMMEDIATELY while config fetches
+    console.log('📦 [ScriptLoader] Phase 2: Parallel core + config load');
     
-    // Phase 3: Core Dependencies (config guaranteed available)
-    console.log('📦 [ScriptLoader] Phase 3: Core dependencies');
+    // Start all independent loads in parallel - DON'T AWAIT YET
+    const supabasePromise = this.loadScript('supabase', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    const configReadyPromise = window.OsliraEnv.ready();
     
-    await this.loadScript('supabase', 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    // Wait for both to complete
+    await Promise.all([supabasePromise, configReadyPromise]);
+    
     if (!window.supabase?.createClient) {
         throw new Error('Supabase CDN failed to expose createClient function');
     }
-    await this.wait(100);
+    console.log('✅ [ScriptLoader] Supabase + Config ready');
     
-    await this.loadScript('config-manager', '/core/config-manager.js');
+    // Phase 3: Load config-manager and auth-manager in parallel
+    console.log('📦 [ScriptLoader] Phase 3: Loading auth stack in parallel');
+    await Promise.all([
+        this.loadScript('config-manager', '/core/config-manager.js'),
+        this.loadScript('auth-manager', '/core/auth-manager.js')
+    ]);
+    
     if (!window.OsliraConfig) {
         throw new Error('config-manager failed to expose OsliraConfig global');
     }
-    await this.wait(100);
-    
-    // Phase 4: Auth & App
-    console.log('📦 [ScriptLoader] Phase 4: Auth & App');
-    
-await this.loadScript('auth-manager', '/core/auth-manager.js');
-if (!window.OsliraAuth) {
-    throw new Error('auth-manager failed to expose OsliraAuth global');
-}
-await this.wait(100);
-
-// simple-app.js removed - no longer needed
+    if (!window.OsliraAuth) {
+        throw new Error('auth-manager failed to expose OsliraAuth global');
+    }
     
     console.log('✅ [ScriptLoader] All core scripts loaded');
 }
@@ -357,17 +349,31 @@ getGlobalName(scriptName) {
             }
         }
         
-        // Load page scripts sequentially for dependency management
-        try {
-            for (const scriptPath of pageConfig.scripts) {
-                const scriptName = this.extractScriptName(scriptPath);
-                await this.loadScript(scriptName, scriptPath);
-            }
-            console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
-        } catch (error) {
-            console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
-            throw error;
-        }
+// Load page scripts in PARALLEL for maximum performance
+try {
+    // Identify scripts that MUST load sequentially (if any have dependencies)
+    const criticalFirst = ['/core/api-client.js']; // Loads first if present
+    const parallelScripts = pageConfig.scripts.filter(s => !criticalFirst.includes(s));
+    
+    // Load critical scripts first
+    for (const scriptPath of pageConfig.scripts.filter(s => criticalFirst.includes(s))) {
+        const scriptName = this.extractScriptName(scriptPath);
+        await this.loadScript(scriptName, scriptPath);
+    }
+    
+    // Load all remaining scripts in parallel
+    await Promise.all(
+        parallelScripts.map(scriptPath => {
+            const scriptName = this.extractScriptName(scriptPath);
+            return this.loadScript(scriptName, scriptPath);
+        })
+    );
+    
+    console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
+} catch (error) {
+    console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
+    throw error;
+}
         
         // CRITICAL: Initialize API client after all scripts are loaded
         if (pageConfig.scripts.includes('/core/api-client.js')) {
