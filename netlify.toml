@@ -44,10 +44,6 @@ Content-Security-Policy = """
 # 🔁 Pretty URL Redirects
 # ===========================
 
-# ===========================
-# 🔁 Pretty URL Redirects
-# ===========================
-
 [[redirects]]
   from = "/dashboard"
   to = "pages/dashboard/index.html"
@@ -155,6 +151,31 @@ Content-Security-Policy = """
 [[redirects]]
   from = "/footer/contact"
   to = "pages/footer/contact/index.html"
+  status = 200
+
+  [[redirects]]
+  from = "/footer/contact/legal"
+  to = "pages/footer/contact/legal/index.html"
+  status = 200
+
+  [[redirects]]
+  from = "/footer/contact/security"
+  to = "pages/footer/contact/security/index.html"
+  status = 200
+
+  [[redirects]]
+  from = "/footer/contact/support"
+  to = "pages/footer/contact/support/index.html"
+  status = 200
+
+  [[redirects]]
+  from = "/footer/contact/report-bug"
+  to = "pages/footer/contact/report-bug/index.html"
+  status = 200
+
+  [[redirects]]
+  from = "/footer/contact/sales"
+  to = "pages/footer/contact/sales/index.html"
   status = 200
 # ===========================
 # 🔁 Legal Subpages
