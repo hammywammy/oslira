@@ -7,9 +7,9 @@
     @apply leading-normal bg-white text-base;
   }
 
-  .home-main-content {
-    @apply pt-16;
-  }
+.home-main-content {
+  @apply pt-0 mt-0;
+}
  
   /* =============================================================================
      STICKY NAVIGATION WITH CONVERSION CTA
@@ -57,7 +57,7 @@
      ============================================================================= */
 
 .urgency-banner {
-  @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16 py-2 opacity-0 transition-opacity duration-300;
+  @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16 py-2 mb-0 pb-0 opacity-0 transition-opacity duration-300;
 }
 
 .urgency-banner.show {
@@ -792,11 +792,6 @@
 
     .mobile-sticky-cta {
       @apply block;
-    }
-
-    /* Add bottom padding to account for sticky CTA */
-    .home-main-content {
-      @apply pb-20;
     }
   }
 
