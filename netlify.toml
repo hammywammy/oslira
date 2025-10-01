@@ -34,6 +34,30 @@ Content-Security-Policy = """
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 
 # ===========================
+# 🗂️ STATIC ASSETS - MUST BE FIRST
+# ===========================
+
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/core/*"
+  to = "/core/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/pages/*"
+  to = "/pages/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/utils/*"
+  to = "/utils/:splat"
+  status = 200
+
+# ===========================
 # 🔁 Pretty URL Redirects
 # ===========================
 
