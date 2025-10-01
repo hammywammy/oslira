@@ -169,8 +169,8 @@ Content-Security-Policy = """
   status = 200
 
   [[redirects]]
-  from = "/footer/contact/report-bug"
-  to = "pages/footer/contact/report-bug/index.html"
+  from = "/footer/contact/bug-report"
+  to = "pages/footer/contact/bug-report/index.html"
   status = 200
 
   [[redirects]]
