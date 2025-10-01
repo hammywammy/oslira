@@ -246,30 +246,24 @@ function setupCTAOptimizations() {
   // Track all CTA clicks
   const ctaButtons = document.querySelectorAll('[class*="btn-primary"], [class*="cta"]');
   
-  ctaButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      const ctaType = identifyCTAType(button);
-      conversionState.ctaClicked = true;
-      
-      trackConversionEvent('cta_clicked', {
-        type: ctaType,
-        text: button.textContent.trim(),
-        position: getCTAPosition(button)
-      });
-      
-      // Add conversion animation
-      button.classList.add('animate-pulse');
-      setTimeout(() => button.classList.remove('animate-pulse'), 600);
-      
-      // If it's a main CTA, redirect to auth
-      if (ctaType.includes('main') || ctaType.includes('primary')) {
-        e.preventDefault();
-        setTimeout(() => {
-          window.location.href = '/auth';
-        }, 300);
-      }
+ctaButtons.forEach(button => {
+  button.addEventListener('click', (e) => {
+    const ctaType = identifyCTAType(button);
+    conversionState.ctaClicked = true;
+    
+    trackConversionEvent('cta_clicked', {
+      type: ctaType,
+      text: button.textContent.trim(),
+      position: getCTAPosition(button)
     });
+    
+    // If it's a main CTA, redirect to auth immediately (no animation/delay)
+    if (ctaType.includes('main') || ctaType.includes('primary')) {
+      e.preventDefault();
+      window.location.href = '/auth';
+    }
   });
+});
   
   // Setup hover effects for additional dopamine
   ctaButtons.forEach(button => {
